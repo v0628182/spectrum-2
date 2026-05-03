@@ -299,6 +299,66 @@
   transform: scale(0.98);
 }
 
+.spectrum-live-panel {
+  margin: -2px 0 16px;
+  padding: 10px 10px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.spectrum-live-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.spectrum-live-header strong {
+  color: var(--clr-acid);
+  font-size: 10px;
+}
+
+.spectrum-bars {
+  height: 76px;
+  display: grid;
+  grid-template-columns: repeat(32, minmax(2px, 1fr));
+  align-items: end;
+  gap: 3px;
+}
+
+.spectrum-bar-slot {
+  height: 100%;
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.spectrum-bar-fill {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(to top, #14e6ff 0%, #8effff 48%, #eeff00 100%);
+  box-shadow: 0 0 10px rgba(20, 230, 255, 0.22);
+  transition: height 45ms linear;
+}
+
+.spectrum-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.34);
+}
+
 .radar-test-full-btn.active {
   background: var(--clr-acid);
   border-color: var(--clr-acid);

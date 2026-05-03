@@ -35,6 +35,8 @@ private:
     float stepDb_ = 0.0f;
     float airDb_ = 0.0f;
     float masterDuckDb_ = 0.0f;
+    float outputTrimDb_ = 0.0f;
+    float maskCutoffHz_ = 2500.0f;
     float sustainedWeaponState_ = 0.0f;
     float footstepLevelerDb_ = 0.0f;
     float rmsState_ = 0.0f;

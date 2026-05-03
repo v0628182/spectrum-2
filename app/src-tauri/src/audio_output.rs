@@ -195,24 +195,46 @@ fn render_session(
         let stream_flags =
             AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
 
-        let buffer_duration = 400_000i64; // 40ms in 100ns units
-
+        let mut default_period = 0i64;
+        let mut minimum_period = 0i64;
         audio_client
-            .Initialize(
-                AUDCLNT_SHAREMODE_SHARED,
-                stream_flags,
-                buffer_duration,
-                0,
-                mix_fmt_ptr,
-                None,
-            )
-            .map_err(|e| {
-                anyhow!(
-                    "WASAPI render init failed: {} (0x{:08X})",
-                    e.message(),
-                    e.code().0 as u32
+            .GetDevicePeriod(Some(&mut default_period), Some(&mut minimum_period))
+            .map_err(|e| anyhow!("GetDevicePeriod: {}", e))?;
+        tracing::info!(
+            "audio-render periods: default={} minimum={}",
+            default_period,
+            minimum_period
+        );
+
+        if let Err(first_err) = audio_client.Initialize(
+            AUDCLNT_SHAREMODE_SHARED,
+            stream_flags,
+            0,
+            0,
+            mix_fmt_ptr,
+            None,
+        ) {
+            tracing::warn!(
+                error = %first_err,
+                "audio-render low-latency init failed; retrying default period"
+            );
+            audio_client
+                .Initialize(
+                    AUDCLNT_SHAREMODE_SHARED,
+                    stream_flags,
+                    default_period,
+                    0,
+                    mix_fmt_ptr,
+                    None,
                 )
-            })?;
+                .map_err(|e| {
+                    anyhow!(
+                        "WASAPI render init failed: {} (0x{:08X})",
+                        e.message(),
+                        e.code().0 as u32
+                    )
+                })?;
+        }
 
         let buffer_size = audio_client
             .GetBufferSize()
@@ -289,10 +311,12 @@ unsafe fn run_render_loop(
         }
 
         // Cap buffer to prevent unbounded growth when output can't keep up
-        // ~500ms @ 48kHz stereo = 48000 samples. Drop oldest if exceeded.
-        const MAX_SAMPLE_BUF: usize = 48000;
-        if sample_buf.len() > MAX_SAMPLE_BUF {
-            let excess = sample_buf.len() - MAX_SAMPLE_BUF;
+        // Drop stale audio aggressively. Glitches are less harmful here than
+        // accumulating delay in a realtime monitoring path.
+        const MAX_BUFFER_FRAMES: usize = 1024;
+        let max_sample_buf = MAX_BUFFER_FRAMES * out_channels as usize;
+        if sample_buf.len() > max_sample_buf {
+            let excess = sample_buf.len() - max_sample_buf;
             sample_buf.drain(..excess);
         }
 
@@ -331,8 +355,7 @@ unsafe fn run_render_loop(
             }
         }
 
-        // Sleep to match roughly the device period (~10ms)
-        thread::sleep(Duration::from_millis(5));
+        thread::sleep(Duration::from_millis(1));
     }
 }
 

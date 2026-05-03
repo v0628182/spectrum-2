@@ -32,7 +32,19 @@ struct EngineParams {
     float stableReleaseMs = 220.0f;
     float footstepGuardAmount = 70.0f;
     float maxCutStepDb = 48.0f;
+    float transientKill = 70.0f;
+    float lookaheadMs = 0.0f;
+    float outputTrimDb = 0.0f;
+    float residualReductionDb = 0.0f;
+    float balanceLowDb = 0.0f;
+    float balanceMidDb = 0.0f;
+    float balanceHighDb = 0.0f;
+    float stftCutoffHz = 2500.0f;
+    float stftPreserveDb = 0.0f;
+    float spectralFloorStab = -34.0f;
+    float protectionPasos = 85.0f;
     bool protectionExtreme = true;
+    bool spectralMaskEnabled = true;
     bool debugLogging = false;
 };
 

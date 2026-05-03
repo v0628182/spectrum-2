@@ -38,6 +38,8 @@ void Processor::reset()
     stepDb_ = 0.0f;
     airDb_ = 0.0f;
     masterDuckDb_ = 0.0f;
+    outputTrimDb_ = 0.0f;
+    maskCutoffHz_ = 2500.0f;
     sustainedWeaponState_ = 0.0f;
     footstepLevelerDb_ = 0.0f;
     rmsState_ = 0.0f;
@@ -52,9 +54,12 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float gunAmount = clamp(params.gunshotReduction / 100.0f, 0.0f, 1.0f);
     const float explosionAmount = clamp(params.explosionReduction / 100.0f, 0.0f, 1.0f);
     const float stability = clamp(params.stabilityAmount / 100.0f, 0.0f, 1.0f);
-    const float guardAmount = clamp(params.footstepGuardAmount / 100.0f, 0.0f, 1.0f);
-    const float floorDb = clamp(params.spectralFloorDb, -60.0f, -12.0f);
-    const float protectionAttackMs = lerp(constants::kProtectionAttackMs, 5.0f, stability);
+    const float guardAmount =
+        std::max(clamp(params.footstepGuardAmount / 100.0f, 0.0f, 1.0f),
+                 clamp(params.protectionPasos / 100.0f, 0.0f, 1.0f));
+    const float floorDb = clamp(lerp(params.spectralFloorDb, params.spectralFloorStab, stability), -60.0f, -12.0f);
+    const float lookaheadAssist = clamp(params.lookaheadMs / 2.0f, 0.0f, 1.0f);
+    const float protectionAttackMs = lerp(constants::kProtectionAttackMs, 2.0f, std::max(stability, lookaheadAssist));
     const float protectionReleaseMs =
         lerp(constants::kProtectionReleaseMs, std::max(150.0f, params.stableReleaseMs), stability);
     const float boostAttackMs = lerp(constants::kBoostAttackMs, 8.0f, stability * 0.65f);
@@ -64,10 +69,13 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
 
     const float protection = scores.protection;
     const float confirmedFootstep = ramp(scores.footstep, 0.45f, 0.72f);
-    const float rawImpactBlock = ramp(scores.impact, 0.22f, 0.70f);
+    const float transientAmount = clamp(params.transientKill / 100.0f, 0.0f, 1.0f);
+    const float maskAmount = params.spectralMaskEnabled ? 1.0f : 0.0f;
+    const float rawImpactBlock = ramp(scores.impact, 0.22f, 0.70f) * transientAmount;
     const float impactBlock = rawImpactBlock * (1.0f - lerp(0.90f, 0.98f, guardAmount) * confirmedFootstep);
     const float footstepProtect = ramp(scores.footstep, 0.38f, 0.68f);
-    const float protectionForCuts = protection * (1.0f - lerp(0.65f, 0.90f, guardAmount) * footstepProtect);
+    const float protectionForCuts =
+        protection * maskAmount * (1.0f - lerp(0.65f, 0.90f, guardAmount) * footstepProtect);
     const float footstepPresence = ramp(scores.footstep, 0.32f, 0.66f);
     const float actionAsWeapon = ramp(scores.action, 0.46f, 0.76f) * (1.0f - lerp(0.85f, 0.96f, guardAmount) * footstepPresence);
     const float sustainedEnergy = std::max(actionAsWeapon, ramp(protectionForCuts, 0.18f, 0.55f));
@@ -76,13 +84,15 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float weaponDuck = std::max(ramp(protectionForCuts, 0.32f, 0.78f), sustainedWeaponState_ * 0.85f);
     const float extremeScale = params.protectionExtreme ? 1.0f : 0.55f;
 
+    const float residualCut = clamp(params.residualReductionDb, -24.0f, 0.0f) * maskAmount;
     float targetLowShelf = constants::kBassReductionDbMax * explosionAmount * protectionForCuts;
     float targetLowMid = constants::kLowMidReductionDbMax * gunAmount * protectionForCuts;
     float targetWeaponMid = params.weaponMidCutDb * gunAmount * extremeScale * weaponDuck;
     float targetStepBody = params.stepBodyBoostDb * footstepAmount * scores.footstep;
-    float targetStep = params.stepClarityBoostDb * footstepAmount * scores.footstep;
+    float targetStep = (params.stepClarityBoostDb + params.stftPreserveDb) * footstepAmount * scores.footstep;
     float targetAir = constants::kActionBoostDbMax * actionAmount * std::max(scores.action, scores.footstep * 0.5f);
     float targetMasterDuck = params.masterDuckDb * gunAmount * extremeScale * weaponDuck;
+    maskCutoffHz_ = clamp(params.stftCutoffHz, 500.0f, 8000.0f);
 
     const float footstepBodyPreserve = footstepAmount * scores.footstep * (1.0f - weaponDuck * lerp(0.35f, 0.12f, guardAmount));
     targetLowShelf += params.stepLowBodyBoostDb * footstepBodyPreserve;
@@ -94,6 +104,9 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
         targetLowMid += -24.0f * gunAmount * extremeScale * hardProtect;
         targetWeaponMid += -18.0f * gunAmount * extremeScale * hardProtect;
         targetAir = std::min(targetAir, 0.0f) + params.weaponAirCutDb * gunAmount * extremeScale * hardProtect;
+        targetLowMid += residualCut * hardProtect * 0.65f;
+        targetWeaponMid += residualCut * hardProtect;
+        targetAir += residualCut * hardProtect * 0.85f;
 
         // Keep the core footstep band alive; gunshots are broadband, but footsteps need 2.5-5 kHz.
         const float protectedStepBoost =
@@ -110,6 +123,8 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
         targetLowMid += -30.0f * impactBlock;
         targetWeaponMid += -24.0f * impactBlock;
         targetAir += -22.0f * impactBlock;
+        targetWeaponMid += residualCut * impactBlock;
+        targetAir += residualCut * impactBlock * 0.75f;
         if (confirmedFootstep < 0.35f) {
             targetStep = std::min(targetStep, 1.5f * footstepAmount * scores.footstep);
         }
@@ -121,6 +136,12 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     targetWeaponMid = clampCutFloor(targetWeaponMid, floorDb);
     targetAir = clampCutFloor(targetAir, floorDb);
     targetMasterDuck = clampCutFloor(targetMasterDuck, floorDb);
+
+    targetLowShelf += clamp(params.balanceLowDb, -12.0f, 12.0f);
+    targetLowMid += clamp(params.balanceMidDb, -12.0f, 12.0f) * 0.65f;
+    targetStepBody += clamp(params.balanceMidDb, -12.0f, 12.0f) * 0.35f;
+    targetAir += clamp(params.balanceHighDb, -12.0f, 12.0f);
+    outputTrimDb_ = clamp(params.outputTrimDb, -20.0f, 6.0f);
 
     lowShelfDb_ = slewControl(
         lowShelfDb_, approachDb(lowShelfDb_, targetLowShelf, protectionAttackMs, protectionReleaseMs),
@@ -164,10 +185,10 @@ void Processor::updateFilters()
     for (auto& channel : channels_) {
         channel.lowShelf.setLowShelf(constants::kSampleRate, 250.0f, 0.707f, lowShelfDb_);
         channel.lowMid.setPeaking(constants::kSampleRate, 650.0f, 0.90f, lowMidDb_);
-        channel.weaponMid.setPeaking(constants::kSampleRate, 1600.0f, 0.85f, weaponMidDb_);
+        channel.weaponMid.setPeaking(constants::kSampleRate, std::max(900.0f, maskCutoffHz_ * 0.64f), 0.85f, weaponMidDb_);
         channel.stepBody.setPeaking(constants::kSampleRate, 1550.0f, 1.35f, stepBodyDb_);
         channel.step.setPeaking(constants::kSampleRate, 3500.0f, 1.85f, stepDb_);
-        channel.air.setPeaking(constants::kSampleRate, 6500.0f, 1.00f, airDb_);
+        channel.air.setPeaking(constants::kSampleRate, std::max(3000.0f, maskCutoffHz_ * 1.55f), 1.00f, airDb_);
     }
 }
 
@@ -203,7 +224,7 @@ void Processor::processSample(float inL, float inR, float& outL, float& outR, fl
     r = channels_[1].step.process(r);
     r = channels_[1].air.process(r);
 
-    const float duckGain = dbToAmp(masterDuckDb_ + footstepLevelerDb_);
+    const float duckGain = dbToAmp(masterDuckDb_ + footstepLevelerDb_ + outputTrimDb_);
     outL = limit(l * duckGain);
     outR = limit(r * duckGain);
     peak = std::max(peak, std::max(std::abs(outL), std::abs(outR)));

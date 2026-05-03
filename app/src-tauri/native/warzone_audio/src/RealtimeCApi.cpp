@@ -36,7 +36,19 @@ warzone_audio::EngineParams toCppParams(const WzaEngineParams& params)
     out.stableReleaseMs = params.stableReleaseMs;
     out.footstepGuardAmount = params.footstepGuardAmount;
     out.maxCutStepDb = params.maxCutStepDb;
+    out.transientKill = params.transientKill;
+    out.lookaheadMs = params.lookaheadMs;
+    out.outputTrimDb = params.outputTrimDb;
+    out.residualReductionDb = params.residualReductionDb;
+    out.balanceLowDb = params.balanceLowDb;
+    out.balanceMidDb = params.balanceMidDb;
+    out.balanceHighDb = params.balanceHighDb;
+    out.stftCutoffHz = params.stftCutoffHz;
+    out.stftPreserveDb = params.stftPreserveDb;
+    out.spectralFloorStab = params.spectralFloorStab;
+    out.protectionPasos = params.protectionPasos;
     out.protectionExtreme = params.protectionExtreme != 0;
+    out.spectralMaskEnabled = params.spectralMaskEnabled != 0;
     out.debugLogging = params.debugLogging != 0;
     return out;
 }

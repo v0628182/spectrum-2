@@ -11,6 +11,12 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const PERCEPTUAL_GAMMA: f32 = 0.50;
 const NOISE_FLOOR: f32 = 0.005;
 const RADAR_GATE: f32 = 0.04;
+const LOW_LATENCY_CHUNK_FRAMES: usize = 128;
+const SPECTRUM_BINS: usize = 32;
+const SPECTRUM_WINDOW: usize = 512;
+const SPECTRUM_SAMPLE_RATE: f32 = 48_000.0;
+const SPECTRUM_MIN_HZ: f32 = 31.5;
+const SPECTRUM_MAX_HZ: f32 = 16_000.0;
 
 // ── Speaker mask bits (WASAPI) ──
 const SPEAKER_FRONT_LEFT: u32 = 0x1;
@@ -341,18 +347,20 @@ fn capture_loop_raw(
         };
 
         let mut def_period = 0i64;
+        let mut min_period = 0i64;
         audio_client
-            .GetDevicePeriod(Some(&mut def_period), None)
+            .GetDevicePeriod(Some(&mut def_period), Some(&mut min_period))
             .map_err(|e| anyhow::anyhow!("GetDevicePeriod: {}", e))?;
 
         tracing::info!(
-            "Radar format: {}ch, {}bit, ba={}, sample={:?}, mask=0x{:X}, period={}, fallback={}",
+            "Radar format: {}ch, {}bit, ba={}, sample={:?}, mask=0x{:X}, period={}, minPeriod={}, fallback={}",
             channels,
             bits,
             blockalign,
             sample_format,
             channel_mask,
             def_period,
+            min_period,
             use_fallback
         );
 
@@ -364,22 +372,35 @@ fn capture_loop_raw(
             AUDCLNT_STREAMFLAGS_LOOPBACK
         };
 
-        audio_client
-            .Initialize(
-                AUDCLNT_SHAREMODE_SHARED,
-                stream_flags,
-                def_period,
-                0,
-                mix_fmt_ptr,
-                None,
-            )
-            .map_err(|e| {
-                anyhow::anyhow!(
-                    "WASAPI Init failed: {} (0x{:08X})",
-                    e.message(),
-                    e.code().0 as u32
+        if let Err(first_err) = audio_client.Initialize(
+            AUDCLNT_SHAREMODE_SHARED,
+            stream_flags,
+            0,
+            0,
+            mix_fmt_ptr,
+            None,
+        ) {
+            tracing::warn!(
+                error = %first_err,
+                "Radar low-latency WASAPI init failed; retrying default period"
+            );
+            audio_client
+                .Initialize(
+                    AUDCLNT_SHAREMODE_SHARED,
+                    stream_flags,
+                    def_period,
+                    0,
+                    mix_fmt_ptr,
+                    None,
                 )
-            })?;
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "WASAPI Init failed: {} (0x{:08X})",
+                        e.message(),
+                        e.code().0 as u32
+                    )
+                })?;
+        }
 
         tracing::info!("Radar WASAPI loopback init OK — capturing HiFi Cable audio only");
         let result = run_raw_capture(
@@ -691,11 +712,11 @@ unsafe fn run_raw_capture(
         bits
     );
 
-    let chunk_frames: usize = 1024;
+    let chunk_frames: usize = LOW_LATENCY_CHUNK_FRAMES;
     let chunk_bytes = chunk_frames * blockalign as usize;
-    let mut sample_queue: VecDeque<u8> = VecDeque::with_capacity(chunk_bytes * 4);
+    let mut sample_queue: VecDeque<u8> = VecDeque::with_capacity(chunk_bytes * 8);
     // Cap queue at ~500ms of audio to prevent OOM if output can't keep up
-    let max_queue_bytes = chunk_bytes * 48; // ~48 chunks ≈ 500ms @ 48kHz
+    let max_queue_bytes = chunk_bytes * 12;
 
     let mut total_frames: u64 = 0;
     let mut total_sends: u64 = 0;
@@ -708,7 +729,7 @@ unsafe fn run_raw_capture(
     const STALE_TIMEOUT: Duration = Duration::from_secs(15);
 
     loop {
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(1));
 
         let mut got_data = false;
 
@@ -807,9 +828,9 @@ unsafe fn run_raw_capture(
             }
         }
 
-        // Periodic logging every ~5 seconds (500 iterations of 10ms sleep)
+        // Periodic logging every ~5 seconds (5000 iterations of 1ms sleep)
         log_counter += 1;
-        if log_counter % 500 == 0 {
+        if log_counter % 5000 == 0 {
             tracing::info!(
                 "Radar stats: frames={}, sends={}, queue={}",
                 total_frames,
@@ -832,6 +853,73 @@ struct RadarState {
     right: f32,
     far_right: f32,
     ambience: f32,
+}
+
+struct SpectrumAnalyzer {
+    window: VecDeque<f32>,
+    smoothed: Vec<f32>,
+    freqs: Vec<f32>,
+}
+
+impl SpectrumAnalyzer {
+    fn new() -> Self {
+        let mut freqs = Vec::with_capacity(SPECTRUM_BINS);
+        for i in 0..SPECTRUM_BINS {
+            let t = i as f32 / (SPECTRUM_BINS.saturating_sub(1).max(1)) as f32;
+            freqs.push(SPECTRUM_MIN_HZ * (SPECTRUM_MAX_HZ / SPECTRUM_MIN_HZ).powf(t));
+        }
+
+        Self {
+            window: VecDeque::with_capacity(SPECTRUM_WINDOW),
+            smoothed: vec![0.0; SPECTRUM_BINS],
+            freqs,
+        }
+    }
+
+    fn push_samples(&mut self, samples: &[f32], channels: u16) -> (Vec<f32>, f32) {
+        if channels == 0 {
+            return (self.smoothed.clone(), 0.0);
+        }
+
+        let ch = channels as usize;
+        for frame in samples.chunks_exact(ch) {
+            let mono = if ch >= 2 {
+                0.5 * (frame[0] + frame[1])
+            } else {
+                frame[0]
+            };
+            if self.window.len() == SPECTRUM_WINDOW {
+                let _ = self.window.pop_front();
+            }
+            self.window.push_back(mono);
+        }
+
+        if self.window.len() < SPECTRUM_WINDOW {
+            return (self.smoothed.clone(), 0.0);
+        }
+
+        let data: Vec<f32> = self.window.iter().copied().collect();
+        let mut peak_value = 0.0f32;
+        let mut peak_hz = 0.0f32;
+        for (idx, freq) in self.freqs.iter().copied().enumerate() {
+            let power = goertzel_power(&data, freq);
+            let amp = power.sqrt();
+            let db = 20.0 * (amp + 1.0e-9).log10();
+            let normalized = ((db + 72.0) / 58.0).clamp(0.0, 1.0);
+            let alpha = if normalized > self.smoothed[idx] {
+                0.55
+            } else {
+                0.18
+            };
+            self.smoothed[idx] = alpha * normalized + (1.0 - alpha) * self.smoothed[idx];
+            if self.smoothed[idx] > peak_value {
+                peak_value = self.smoothed[idx];
+                peak_hz = freq;
+            }
+        }
+
+        (self.smoothed.clone(), peak_hz)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -873,6 +961,7 @@ fn analysis_loop(rx: Receiver<AudioPacket>, snapshot: Arc<RwLock<RadarSnapshotDt
     let attack = 0.55_f32;
     let release = 0.12_f32;
     let mut recv_count: u64 = 0;
+    let mut spectrum = SpectrumAnalyzer::new();
 
     while let Ok((samples, channels, mask)) = rx.recv() {
         recv_count += 1;
@@ -890,6 +979,7 @@ fn analysis_loop(rx: Receiver<AudioPacket>, snapshot: Arc<RwLock<RadarSnapshotDt
         prev = smoothed;
 
         let (pan, volume) = stereo_quick(&samples, channels);
+        let (spectrum_bins, spectrum_peak_hz) = spectrum.push_samples(&samples, channels);
         let now_ms = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
@@ -906,6 +996,8 @@ fn analysis_loop(rx: Receiver<AudioPacket>, snapshot: Arc<RwLock<RadarSnapshotDt
             g.far_right = smoothed.far_right;
             g.ambience = smoothed.ambience;
             g.pan = pan;
+            g.spectrum = spectrum_bins;
+            g.spectrum_peak_hz = spectrum_peak_hz;
             g.volume = volume;
             g.last_update_ms = Some(now_ms);
             g.last_error = None;
@@ -943,6 +1035,30 @@ fn stereo_quick(samples: &[f32], channels: u16) -> (f32, f32) {
     let rr = (sr / n as f32).sqrt();
     let pan = (rr - rl) / (rr + rl + 1e-10);
     (pan, rl.max(rr).min(1.0))
+}
+
+fn goertzel_power(samples: &[f32], frequency_hz: f32) -> f32 {
+    if samples.is_empty() {
+        return 0.0;
+    }
+
+    let n = samples.len() as f32;
+    let k = (0.5 + (n * frequency_hz / SPECTRUM_SAMPLE_RATE)).floor();
+    let omega = 2.0 * std::f32::consts::PI * k / n;
+    let coeff = 2.0 * omega.cos();
+    let mut q1 = 0.0f32;
+    let mut q2 = 0.0f32;
+    let window_den = (samples.len().saturating_sub(1)).max(1) as f32;
+
+    for (idx, sample) in samples.iter().copied().enumerate() {
+        let phase = 2.0 * std::f32::consts::PI * idx as f32 / window_den;
+        let hann = 0.5 - 0.5 * phase.cos();
+        let q0 = coeff * q1 - q2 + sample * hann;
+        q2 = q1;
+        q1 = q0;
+    }
+
+    (q1 * q1 + q2 * q2 - coeff * q1 * q2).max(0.0) / n
 }
 
 fn analyze_radar(samples: &[f32], channels: u16, mask: u32) -> RadarState {

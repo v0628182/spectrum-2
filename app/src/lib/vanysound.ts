@@ -67,6 +67,8 @@ export interface RadarSnapshot {
   left: number;
   pan: number;
   right: number;
+  spectrum: number[];
+  spectrumPeakHz: number;
   volume: number;
 }
 

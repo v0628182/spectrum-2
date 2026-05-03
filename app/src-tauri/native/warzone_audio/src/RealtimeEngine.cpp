@@ -46,7 +46,19 @@ RealtimeEngine::AtomicParams::AtomicParams() noexcept
       stableReleaseMs(EngineParams{}.stableReleaseMs),
       footstepGuardAmount(EngineParams{}.footstepGuardAmount),
       maxCutStepDb(EngineParams{}.maxCutStepDb),
+      transientKill(EngineParams{}.transientKill),
+      lookaheadMs(EngineParams{}.lookaheadMs),
+      outputTrimDb(EngineParams{}.outputTrimDb),
+      residualReductionDb(EngineParams{}.residualReductionDb),
+      balanceLowDb(EngineParams{}.balanceLowDb),
+      balanceMidDb(EngineParams{}.balanceMidDb),
+      balanceHighDb(EngineParams{}.balanceHighDb),
+      stftCutoffHz(EngineParams{}.stftCutoffHz),
+      stftPreserveDb(EngineParams{}.stftPreserveDb),
+      spectralFloorStab(EngineParams{}.spectralFloorStab),
+      protectionPasos(EngineParams{}.protectionPasos),
       protectionExtreme(EngineParams{}.protectionExtreme ? 1 : 0),
+      spectralMaskEnabled(EngineParams{}.spectralMaskEnabled ? 1 : 0),
       debugLogging(EngineParams{}.debugLogging ? 1 : 0)
 {
 }
@@ -77,7 +89,19 @@ void RealtimeEngine::AtomicParams::store(const EngineParams& params) noexcept
     stableReleaseMs.store(sanitize(params.stableReleaseMs, EngineParams{}.stableReleaseMs), std::memory_order_relaxed);
     footstepGuardAmount.store(sanitize(params.footstepGuardAmount, EngineParams{}.footstepGuardAmount), std::memory_order_relaxed);
     maxCutStepDb.store(sanitize(params.maxCutStepDb, EngineParams{}.maxCutStepDb), std::memory_order_relaxed);
+    transientKill.store(sanitize(params.transientKill, EngineParams{}.transientKill), std::memory_order_relaxed);
+    lookaheadMs.store(sanitize(params.lookaheadMs, EngineParams{}.lookaheadMs), std::memory_order_relaxed);
+    outputTrimDb.store(sanitize(params.outputTrimDb, EngineParams{}.outputTrimDb), std::memory_order_relaxed);
+    residualReductionDb.store(sanitize(params.residualReductionDb, EngineParams{}.residualReductionDb), std::memory_order_relaxed);
+    balanceLowDb.store(sanitize(params.balanceLowDb, EngineParams{}.balanceLowDb), std::memory_order_relaxed);
+    balanceMidDb.store(sanitize(params.balanceMidDb, EngineParams{}.balanceMidDb), std::memory_order_relaxed);
+    balanceHighDb.store(sanitize(params.balanceHighDb, EngineParams{}.balanceHighDb), std::memory_order_relaxed);
+    stftCutoffHz.store(sanitize(params.stftCutoffHz, EngineParams{}.stftCutoffHz), std::memory_order_relaxed);
+    stftPreserveDb.store(sanitize(params.stftPreserveDb, EngineParams{}.stftPreserveDb), std::memory_order_relaxed);
+    spectralFloorStab.store(sanitize(params.spectralFloorStab, EngineParams{}.spectralFloorStab), std::memory_order_relaxed);
+    protectionPasos.store(sanitize(params.protectionPasos, EngineParams{}.protectionPasos), std::memory_order_relaxed);
     protectionExtreme.store(params.protectionExtreme ? 1 : 0, std::memory_order_relaxed);
+    spectralMaskEnabled.store(params.spectralMaskEnabled ? 1 : 0, std::memory_order_relaxed);
     debugLogging.store(params.debugLogging ? 1 : 0, std::memory_order_relaxed);
 }
 
@@ -108,7 +132,19 @@ EngineParams RealtimeEngine::AtomicParams::load() const noexcept
     params.stableReleaseMs = stableReleaseMs.load(std::memory_order_relaxed);
     params.footstepGuardAmount = footstepGuardAmount.load(std::memory_order_relaxed);
     params.maxCutStepDb = maxCutStepDb.load(std::memory_order_relaxed);
+    params.transientKill = transientKill.load(std::memory_order_relaxed);
+    params.lookaheadMs = lookaheadMs.load(std::memory_order_relaxed);
+    params.outputTrimDb = outputTrimDb.load(std::memory_order_relaxed);
+    params.residualReductionDb = residualReductionDb.load(std::memory_order_relaxed);
+    params.balanceLowDb = balanceLowDb.load(std::memory_order_relaxed);
+    params.balanceMidDb = balanceMidDb.load(std::memory_order_relaxed);
+    params.balanceHighDb = balanceHighDb.load(std::memory_order_relaxed);
+    params.stftCutoffHz = stftCutoffHz.load(std::memory_order_relaxed);
+    params.stftPreserveDb = stftPreserveDb.load(std::memory_order_relaxed);
+    params.spectralFloorStab = spectralFloorStab.load(std::memory_order_relaxed);
+    params.protectionPasos = protectionPasos.load(std::memory_order_relaxed);
     params.protectionExtreme = protectionExtreme.load(std::memory_order_relaxed) != 0;
+    params.spectralMaskEnabled = spectralMaskEnabled.load(std::memory_order_relaxed) != 0;
     params.debugLogging = debugLogging.load(std::memory_order_relaxed) != 0;
     return params;
 }

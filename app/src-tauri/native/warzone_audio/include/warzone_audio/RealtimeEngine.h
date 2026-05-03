@@ -74,7 +74,19 @@ private:
         std::atomic<float> stableReleaseMs;
         std::atomic<float> footstepGuardAmount;
         std::atomic<float> maxCutStepDb;
+        std::atomic<float> transientKill;
+        std::atomic<float> lookaheadMs;
+        std::atomic<float> outputTrimDb;
+        std::atomic<float> residualReductionDb;
+        std::atomic<float> balanceLowDb;
+        std::atomic<float> balanceMidDb;
+        std::atomic<float> balanceHighDb;
+        std::atomic<float> stftCutoffHz;
+        std::atomic<float> stftPreserveDb;
+        std::atomic<float> spectralFloorStab;
+        std::atomic<float> protectionPasos;
         std::atomic<int> protectionExtreme;
+        std::atomic<int> spectralMaskEnabled;
         std::atomic<int> debugLogging;
 
         AtomicParams() noexcept;

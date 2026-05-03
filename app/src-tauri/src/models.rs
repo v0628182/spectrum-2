@@ -96,6 +96,8 @@ pub struct RadarSnapshotDto {
     pub left: f32,
     pub pan: f32,
     pub right: f32,
+    pub spectrum: Vec<f32>,
+    pub spectrum_peak_hz: f32,
     pub volume: f32,
 }
 

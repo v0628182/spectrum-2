@@ -39,7 +39,19 @@ typedef struct WzaEngineParams {
     float stableReleaseMs;
     float footstepGuardAmount;
     float maxCutStepDb;
+    float transientKill;
+    float lookaheadMs;
+    float outputTrimDb;
+    float residualReductionDb;
+    float balanceLowDb;
+    float balanceMidDb;
+    float balanceHighDb;
+    float stftCutoffHz;
+    float stftPreserveDb;
+    float spectralFloorStab;
+    float protectionPasos;
     int protectionExtreme;
+    int spectralMaskEnabled;
     int debugLogging;
 } WzaEngineParams;
 

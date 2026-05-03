@@ -50,7 +50,7 @@ const DSP_PARAMS: DspParam[] = [
 
   // ── TRANSIENT / LOOKAHEAD ──
   { key: 'transientKill',        label: 'Transient kill',         min: 0,    max: 100,   step: 1,    default: 70,   unit: '',   section: 'transient' },
-  { key: 'lookaheadMs',          label: 'Lookahead ms',           min: 0,    max: 20,    step: 0.01, default: 5.33, unit: '',   section: 'transient' },
+  { key: 'lookaheadMs',          label: 'Lookahead ms',           min: 0,    max: 2,     step: 0.01, default: 0,    unit: '',   section: 'transient' },
 
   // ── SALIDA ──
   { key: 'actionDetail',         label: 'Action Detail',          min: 0,    max: 100,   step: 1,    default: 26,   unit: '',   section: 'salida' },
@@ -68,7 +68,7 @@ const DSP_PARAMS: DspParam[] = [
   { key: 'footstepLevelerAmount',   label: 'Footstep Volume',     min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'leveling' },
   { key: 'footstepTargetRmsDb',     label: 'Loudness objetivo',   min: -36,  max: -14,   step: 0.5,  default: -14,  unit: '',   section: 'leveling' },
   { key: 'footstepMaxLiftDb',       label: 'Max Lift dB',         min: 0,    max: 18,    step: 0.5,  default: 12,   unit: '',   section: 'leveling' },
-  { key: 'footstepLevelerSpeedMs',  label: 'Velocidad ms',        min: 10,   max: 250,   step: 5,    default: 10,   unit: '',   section: 'leveling' },
+  { key: 'footstepLevelerSpeedMs',  label: 'Velocidad ms',        min: 1,    max: 120,   step: 1,    default: 5,    unit: '',   section: 'leveling' },
 
   // ── ESTABILIDAD ──
   { key: 'stabilityAmount',      label: 'Estabilidad general',    min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'estabilidad' },
@@ -281,9 +281,10 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
 
   const allPresets = useMemo(() => [...PRESETS, ...customPresets], [customPresets]);
 
-  const flushToBackend = useCallback((allParams: Record<string, number>, extreme: boolean) => {
+  const flushToBackend = useCallback((allParams: Record<string, number>, extreme: boolean, mask: boolean) => {
     const payload: Record<string, number> = { ...allParams };
     payload.protectionExtreme = extreme ? 1 : 0;
+    payload.spectralMaskEnabled = mask ? 1 : 0;
     setApplying(true);
     setLastError(null);
     vanySoundApi.applyDspConfig(payload)
@@ -353,12 +354,12 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
     setDspEnabled(next);
     if (next) {
       // Turning ON: apply current params
-      flushToBackend(params, protectionExtreme);
+      flushToBackend(params, protectionExtreme, spectralMask);
     } else {
       // Turning OFF: bypass all processing
       flushBypass();
     }
-  }, [dspEnabled, params, protectionExtreme, flushToBackend, flushBypass]);
+  }, [dspEnabled, params, protectionExtreme, spectralMask, flushToBackend, flushBypass]);
 
   const handleParamChange = useCallback((key: string, value: number) => {
     setParams((prev) => {
@@ -366,14 +367,14 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       if (dspEnabled) {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-          flushToBackend(next, protectionExtreme);
+          flushToBackend(next, protectionExtreme, spectralMask);
         }, 120);
       }
       return next;
     });
     setActivePreset(null);
     setSaveStatus(null);
-  }, [flushToBackend, protectionExtreme, dspEnabled]);
+  }, [flushToBackend, protectionExtreme, spectralMask, dspEnabled]);
 
   const handleReset = useCallback(() => {
     const defaults: Record<string, number> = {};
@@ -382,7 +383,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
     setProtectionExtreme(true);
     setActivePreset(null);
     setSaveStatus(null);
-    flushToBackend(defaults, true);
+    flushToBackend(defaults, true, true);
   }, [flushToBackend]);
 
   const handleLoadPreset = useCallback((preset: Preset) => {
@@ -401,8 +402,12 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
     setSaveStatus(null);
     setPresetOpen(false);
     if (!dspEnabled) setDspEnabled(true);
-    flushToBackend(next, preset.flags?.protectionExtreme ?? protectionExtreme);
-  }, [flushToBackend, protectionExtreme, dspEnabled]);
+    flushToBackend(
+      next,
+      preset.flags?.protectionExtreme ?? protectionExtreme,
+      preset.flags?.spectralMaskEnabled ?? spectralMask,
+    );
+  }, [flushToBackend, protectionExtreme, spectralMask, dspEnabled]);
 
   if (!isOpen) return null;
 
@@ -422,7 +427,11 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
               <input
                 type="checkbox"
                 checked={spectralMask}
-                onChange={() => setSpectralMask(!spectralMask)}
+                onChange={() => {
+                  const next = !spectralMask;
+                  setSpectralMask(next);
+                  if (dspEnabled) flushToBackend(params, protectionExtreme, next);
+                }}
               />
               <span>Activar mascara espectral</span>
             </label>
@@ -551,7 +560,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
                   onClick={() => {
                     const next = !protectionExtreme;
                     setProtectionExtreme(next);
-                    flushToBackend(params, next);
+                    flushToBackend(params, next, spectralMask);
                   }}
                 />
               </div>

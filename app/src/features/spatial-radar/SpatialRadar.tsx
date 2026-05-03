@@ -45,6 +45,14 @@ function softCeil(x: number): number {
   return SOFT_KNEE + (SOFT_MAX - SOFT_KNEE) * Math.pow(t, 0.45);
 }
 
+const SPECTRUM_LABELS = ['32', '63', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'];
+
+function formatHz(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return '--';
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10_000 ? 0 : 1)}k`;
+  return `${Math.round(value)}`;
+}
+
 // ── Feature flag: flip to `true` to re-enable the mini radar overlay ──
 const MINI_RADAR_FEATURE_ENABLED = false;
 
@@ -98,6 +106,8 @@ export const SpatialRadar: React.FC<SpatialRadarProps> = ({
 
   // Ambience ring opacity
   const ambience = radar?.ambience ?? 0;
+  const spectrum = radar?.spectrum?.length ? radar.spectrum : Array.from({ length: 32 }, () => 0);
+  const spectrumPeak = radar?.spectrumPeakHz ?? 0;
 
   return (
     <div className={`opt-card ${engineActive ? 'glow-panel-acid' : ''}`}>
@@ -199,6 +209,28 @@ export const SpatialRadar: React.FC<SpatialRadarProps> = ({
             <div className="range-ring r-50"></div>
             <div className="range-ring r-75"></div>
           </div>
+        </div>
+      </div>
+
+      <div className="spectrum-live-panel">
+        <div className="spectrum-live-header">
+          <span>SPECTRUM</span>
+          <strong>{formatHz(spectrumPeak)} Hz</strong>
+        </div>
+        <div className="spectrum-bars" aria-label="Live frequency spectrum">
+          {spectrum.map((value, index) => (
+            <div className="spectrum-bar-slot" key={`${index}-${spectrum.length}`}>
+              <div
+                className="spectrum-bar-fill"
+                style={{ height: `${Math.max(3, Math.min(100, value * 100))}%` }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="spectrum-scale">
+          {SPECTRUM_LABELS.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
         </div>
       </div>
 

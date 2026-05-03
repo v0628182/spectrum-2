@@ -34,7 +34,19 @@ pub struct EngineParams {
     stable_release_ms: f32,
     footstep_guard_amount: f32,
     max_cut_step_db: f32,
+    transient_kill: f32,
+    lookahead_ms: f32,
+    output_trim_db: f32,
+    residual_reduction_db: f32,
+    balance_low_db: f32,
+    balance_mid_db: f32,
+    balance_high_db: f32,
+    stft_cutoff_hz: f32,
+    stft_preserve_db: f32,
+    spectral_floor_stab: f32,
+    protection_pasos: f32,
     protection_extreme: i32,
+    spectral_mask_enabled: i32,
     debug_logging: i32,
 }
 
@@ -65,7 +77,19 @@ impl Default for EngineParams {
             stable_release_ms: 220.0,
             footstep_guard_amount: 70.0,
             max_cut_step_db: 48.0,
+            transient_kill: 70.0,
+            lookahead_ms: 0.0,
+            output_trim_db: 0.0,
+            residual_reduction_db: 0.0,
+            balance_low_db: 0.0,
+            balance_mid_db: 0.0,
+            balance_high_db: 0.0,
+            stft_cutoff_hz: 2500.0,
+            stft_preserve_db: 0.0,
+            spectral_floor_stab: -34.0,
+            protection_pasos: 85.0,
             protection_extreme: 1,
+            spectral_mask_enabled: 1,
             debug_logging: 0,
         }
     }
@@ -103,7 +127,19 @@ impl EngineParams {
         out.stable_release_ms = get(params, "stableReleaseMs", out.stable_release_ms);
         out.footstep_guard_amount = get(params, "footstepGuardAmount", out.footstep_guard_amount);
         out.max_cut_step_db = get(params, "maxCutStepDb", out.max_cut_step_db);
+        out.transient_kill = get(params, "transientKill", out.transient_kill);
+        out.lookahead_ms = get(params, "lookaheadMs", out.lookahead_ms);
+        out.output_trim_db = get(params, "outputTrimDb", out.output_trim_db);
+        out.residual_reduction_db = get(params, "residualReductionDb", out.residual_reduction_db);
+        out.balance_low_db = get(params, "balanceLowDb", out.balance_low_db);
+        out.balance_mid_db = get(params, "balanceMidDb", out.balance_mid_db);
+        out.balance_high_db = get(params, "balanceHighDb", out.balance_high_db);
+        out.stft_cutoff_hz = get(params, "stftCutoffHz", out.stft_cutoff_hz);
+        out.stft_preserve_db = get(params, "stftPreserveDb", out.stft_preserve_db);
+        out.spectral_floor_stab = get(params, "spectralFloorStab", out.spectral_floor_stab);
+        out.protection_pasos = get(params, "protectionPasos", out.protection_pasos);
         out.protection_extreme = (get(params, "protectionExtreme", 1.0) > 0.5) as i32;
+        out.spectral_mask_enabled = (get(params, "spectralMaskEnabled", 1.0) > 0.5) as i32;
         out.debug_logging = (get(params, "debugLogging", 0.0) > 0.5) as i32;
         out
     }
