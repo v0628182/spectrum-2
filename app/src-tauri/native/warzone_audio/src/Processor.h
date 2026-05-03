@@ -51,6 +51,7 @@ private:
     float wetMix_ = 1.0f;
     float limiterReleaseMs_ = 50.0f;
     float stereoWidth_ = 1.0f;
+    bool weaponOnlyMode_ = false;
     float sustainedWeaponState_ = 0.0f;
     float footstepLevelerDb_ = 0.0f;
     float rmsState_ = 0.0f;

@@ -85,6 +85,7 @@ private:
         std::atomic<float> stftPreserveDb;
         std::atomic<float> spectralFloorStab;
         std::atomic<float> protectionPasos;
+        std::atomic<float> weaponOnlyMode;
         std::atomic<float> changeIntensity;
         std::atomic<float> subtletyAmount;
         std::atomic<float> wetMix;

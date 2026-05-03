@@ -43,6 +43,7 @@ struct EngineParams {
     float stftPreserveDb = 0.0f;
     float spectralFloorStab = -34.0f;
     float protectionPasos = 85.0f;
+    float weaponOnlyMode = 0.0f;
     float changeIntensity = 100.0f;
     float subtletyAmount = 35.0f;
     float wetMix = 100.0f;

@@ -50,6 +50,7 @@ typedef struct WzaEngineParams {
     float stftPreserveDb;
     float spectralFloorStab;
     float protectionPasos;
+    float weaponOnlyMode;
     float changeIntensity;
     float subtletyAmount;
     float wetMix;

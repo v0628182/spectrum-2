@@ -57,6 +57,7 @@ RealtimeEngine::AtomicParams::AtomicParams() noexcept
       stftPreserveDb(EngineParams{}.stftPreserveDb),
       spectralFloorStab(EngineParams{}.spectralFloorStab),
       protectionPasos(EngineParams{}.protectionPasos),
+      weaponOnlyMode(EngineParams{}.weaponOnlyMode),
       changeIntensity(EngineParams{}.changeIntensity),
       subtletyAmount(EngineParams{}.subtletyAmount),
       wetMix(EngineParams{}.wetMix),
@@ -120,6 +121,7 @@ void RealtimeEngine::AtomicParams::store(const EngineParams& params) noexcept
     stftPreserveDb.store(sanitize(params.stftPreserveDb, EngineParams{}.stftPreserveDb), std::memory_order_relaxed);
     spectralFloorStab.store(sanitize(params.spectralFloorStab, EngineParams{}.spectralFloorStab), std::memory_order_relaxed);
     protectionPasos.store(sanitize(params.protectionPasos, EngineParams{}.protectionPasos), std::memory_order_relaxed);
+    weaponOnlyMode.store(sanitize(params.weaponOnlyMode, EngineParams{}.weaponOnlyMode), std::memory_order_relaxed);
     changeIntensity.store(sanitize(params.changeIntensity, EngineParams{}.changeIntensity), std::memory_order_relaxed);
     subtletyAmount.store(sanitize(params.subtletyAmount, EngineParams{}.subtletyAmount), std::memory_order_relaxed);
     wetMix.store(sanitize(params.wetMix, EngineParams{}.wetMix), std::memory_order_relaxed);
@@ -183,6 +185,7 @@ EngineParams RealtimeEngine::AtomicParams::load() const noexcept
     params.stftPreserveDb = stftPreserveDb.load(std::memory_order_relaxed);
     params.spectralFloorStab = spectralFloorStab.load(std::memory_order_relaxed);
     params.protectionPasos = protectionPasos.load(std::memory_order_relaxed);
+    params.weaponOnlyMode = weaponOnlyMode.load(std::memory_order_relaxed);
     params.changeIntensity = changeIntensity.load(std::memory_order_relaxed);
     params.subtletyAmount = subtletyAmount.load(std::memory_order_relaxed);
     params.wetMix = wetMix.load(std::memory_order_relaxed);

@@ -45,6 +45,7 @@ pub struct EngineParams {
     stft_preserve_db: f32,
     spectral_floor_stab: f32,
     protection_pasos: f32,
+    weapon_only_mode: f32,
     change_intensity: f32,
     subtlety_amount: f32,
     wet_mix: f32,
@@ -108,6 +109,7 @@ impl Default for EngineParams {
             stft_preserve_db: 0.0,
             spectral_floor_stab: -34.0,
             protection_pasos: 85.0,
+            weapon_only_mode: 0.0,
             change_intensity: 100.0,
             subtlety_amount: 35.0,
             wet_mix: 100.0,
@@ -178,6 +180,7 @@ impl EngineParams {
         out.stft_preserve_db = get(params, "stftPreserveDb", out.stft_preserve_db);
         out.spectral_floor_stab = get(params, "spectralFloorStab", out.spectral_floor_stab);
         out.protection_pasos = get(params, "protectionPasos", out.protection_pasos);
+        out.weapon_only_mode = get(params, "weaponOnlyMode", out.weapon_only_mode);
         out.change_intensity = get(params, "changeIntensity", out.change_intensity);
         out.subtlety_amount = get(params, "subtletyAmount", out.subtlety_amount);
         out.wet_mix = get(params, "wetMix", out.wet_mix);

@@ -47,6 +47,7 @@ warzone_audio::EngineParams toCppParams(const WzaEngineParams& params)
     out.stftPreserveDb = params.stftPreserveDb;
     out.spectralFloorStab = params.spectralFloorStab;
     out.protectionPasos = params.protectionPasos;
+    out.weaponOnlyMode = params.weaponOnlyMode;
     out.changeIntensity = params.changeIntensity;
     out.subtletyAmount = params.subtletyAmount;
     out.wetMix = params.wetMix;
