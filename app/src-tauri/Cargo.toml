@@ -1,0 +1,61 @@
+[package]
+name = "vanysound-app"
+version = "1.0.12"
+edition = "2021"
+
+[workspace]
+
+[lib]
+name = "vanysound_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+cc = "1"
+tauri-build = { version = "2.5.6", features = [] }
+
+[dependencies]
+anyhow = "1"
+aes = "0.8"
+cbc = "0.1"
+cipher = { version = "0.4", features = ["block-padding"] }
+crossbeam-channel = "0.5"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tauri = { version = "2.10.3", features = [] }
+tauri-plugin-opener = "2.5.3"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+ureq = { version = "2", features = ["json"] }
+wasapi = "0.23"
+winreg = "0.52"
+
+[dependencies.windows]
+version = "0.58"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true

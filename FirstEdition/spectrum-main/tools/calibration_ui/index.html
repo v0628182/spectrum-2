@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warzone Audio Calibrator</title>
+  <link rel="stylesheet" href="/styles.css?v=6">
+</head>
+<body>
+  <main class="app">
+    <section class="topbar">
+      <div>
+        <h1>Warzone Audio Calibrator</h1>
+        <p>DSP offline para encontrar el preset antes de APO.</p>
+      </div>
+      <button id="refresh">Actualizar clips</button>
+    </section>
+
+    <section class="workspace">
+      <aside class="panel">
+        <label class="field">
+          <span>Clip WAV</span>
+          <select id="clip"></select>
+        </label>
+        <label class="field">
+          <span>Preset</span>
+          <select id="preset"></select>
+        </label>
+        <label class="toggle">
+          <input id="autoProcess" type="checkbox" checked>
+          <span>Auto procesar cambios</span>
+        </label>
+        <label class="field">
+          <span>Nombre preset</span>
+          <input id="presetName" type="text" value="opcion_2">
+        </label>
+        <button id="process" class="primary">Procesar ahora</button>
+        <button id="applyPending" hidden>Aplicar procesado listo</button>
+        <button id="savePreset">Guardar preset</button>
+        <button id="comparePresets">Comparar presets</button>
+        <div id="status" class="status">Listo.</div>
+      </aside>
+
+      <section class="players">
+        <div class="audio-card transport">
+          <h2>A/B y Loop</h2>
+          <div class="transport-grid">
+            <button id="toggleAB">Escuchar procesado</button>
+            <button id="syncAB">Sincronizar A/B</button>
+            <button id="setLoopStart">Inicio loop</button>
+            <button id="setLoopEnd">Fin loop</button>
+            <button id="toggleLoop">Loop off</button>
+            <button id="clearLoop">Limpiar loop</button>
+          </div>
+          <div id="loopReadout" class="status">Loop: sin rango</div>
+          <div class="transport-grid markers">
+            <button data-marker="pasos">Marca pasos</button>
+            <button data-marker="disparos">Marca disparos</button>
+            <button data-marker="airstrike">Marca airstrike</button>
+            <button data-marker="mal">Marca suena mal</button>
+          </div>
+          <button id="saveMarkers">Guardar marcas</button>
+          <div id="markersList" class="markers-list"></div>
+        </div>
+        <div class="audio-card">
+          <h2>Original</h2>
+          <audio id="originalAudio" controls></audio>
+          <canvas id="originalCanvas" width="900" height="180"></canvas>
+        </div>
+        <div class="audio-card">
+          <h2>Procesado</h2>
+          <audio id="processedAudio" controls></audio>
+          <canvas id="processedCanvas" width="900" height="180"></canvas>
+        </div>
+      </section>
+
+      <section class="panel controls">
+        <h2>Pasos</h2>
+        <div id="stepControls"></div>
+        <h2>Disparos / Airstrikes</h2>
+        <div id="weaponControls"></div>
+        <h2>Salida</h2>
+        <div id="outputControls"></div>
+        <h2>Leveling</h2>
+        <div id="levelControls"></div>
+        <h2>Estabilidad</h2>
+        <div id="stableControls"></div>
+      </section>
+
+      <section class="panel summary">
+        <h2>Scores</h2>
+        <div id="summaryGrid" class="summary-grid"></div>
+        <canvas id="scoreCanvas" width="1200" height="220"></canvas>
+        <div id="comparisonList" class="comparison-list"></div>
+      </section>
+    </section>
+  </main>
+  <script src="/app.js?v=13"></script>
+</body>
+</html>

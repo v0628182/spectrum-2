@@ -1,0 +1,1 @@
+{"main-capability":{"identifier":"main-capability","description":"Capability for the main VanySound window","local":true,"windows":["main"],"permissions":["core:default","core:window:allow-close","core:window:allow-minimize","core:window:allow-toggle-maximize","core:window:allow-start-dragging","opener:default","updater:default","process:default"]}}

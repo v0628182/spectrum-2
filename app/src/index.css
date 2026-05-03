@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS — Zero Latency Obsidian (Inspired by Linear & Lamborghini)
+   ============================================================ */
+:root {
+  /* ── Core Brutalist Scale ── */
+  --clr-void: #000000;           
+  --clr-obsidian: #0f0f12;       
+  --clr-carbon: #18181b;         
+  --clr-ash: #27272a;            
+  
+  --clr-pure: #ffffff;           
+  --clr-titanium: #d4d4d8;       
+  --clr-silver: #a1a1aa;         
+
+  /* ── Toxic Weapons ── */
+  --clr-acid: #eeff00;         
+  --clr-acid-hover: #ccdd00;
+  --clr-blood: #ff3333;           
+  
+  /* ── Semantic Aliases ── */
+  --bg-base:        var(--clr-void);
+  --bg-surface:     var(--clr-obsidian);
+  --bg-elevated:    var(--clr-carbon);
+  --bg-panel:       var(--clr-ash);
+
+  --text-primary:   var(--clr-pure);
+  --text-secondary: var(--clr-titanium);
+  --text-muted:     var(--clr-silver);
+  --text-accent:    var(--clr-acid);
+
+  /* ── Brutalist Borders ── */
+  --border-subtle:  rgba(255, 255, 255, 0.1); 
+  --border-visible: rgba(255, 255, 255, 0.2); 
+  --border-strong:  rgba(255, 255, 255, 0.4);
+  --border-accent:  var(--clr-acid);
+
+  /* ── Hard Shadows (Neo-Brutalism) ── */
+  --shadow-flat:     4px 4px 0 rgba(0, 0, 0, 1);
+  --shadow-elevated: 6px 6px 0 rgba(238, 255, 0, 0.2);
+  --glow-accent:     0 0 20px rgba(238, 255, 0, 0.3);
+  --inset-panel:     inset 0 0 0 1px var(--border-visible);
+
+  /* ── Typography ── */
+  --font-display: 'Inter', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Geometry (Lamborghini Sharpness combined with Linear Micro-rounding) ── */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  /* Instead of completely 0, use extreme precision micro-bevels */
+
+  /* ── Transitions ── */
+  --ease-snappy:  cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast:   120ms;
+  --dur-normal: 250ms;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-feature-settings: "cv01", "ss03"; /* Linear core feature */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  user-select: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  font-feature-settings: "cv01", "ss03";
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 600; /* Replaced 800 with 600 max for linear precise aesthetic */
+  line-height: 1.0;
+  letter-spacing: -0.04em; /* Linear tight tracking */
+  text-transform: uppercase; /* Keeping the shout from Lambo/Rara */
+}
+
+/* Root layout structure */
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+  position: relative;
+}
+
+.layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.app-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Hard-Edge Titlebar */
+.titlebar {
+  height: 48px;
+  background: var(--bg-base);
+  -webkit-app-region: drag;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1000;
+  position: relative;
+  border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+}
+
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 20px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.titlebar-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+  height: 100%;
+  user-select: none;
+}
+
+.titlebar-btn {
+  width: 48px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: all var(--dur-fast) var(--ease-snappy);
+  background: transparent;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 255, 255, 0.05); /* Linear subtle interaction */
+  color: var(--text-primary);
+}
+
+.titlebar-btn.close:hover {
+  background: var(--clr-blood);
+  color: var(--clr-pure);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-visible); 
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong); 
+}
+
+/* Utility Classes */
+.text-volt { color: var(--clr-acid); }
+.text-blood { color: var(--clr-blood); }
+.text-cyan { color: var(--clr-acid); }
+.text-purple { color: var(--clr-acid); }
+.mono-font { font-family: var(--font-mono); font-weight: 400; }

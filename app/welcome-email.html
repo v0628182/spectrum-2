@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome — Vany Sound</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --clr-bg: #030303;
+      --clr-surface: #0a0a0a;
+      --clr-surface-alt: #141414;
+      --clr-acid: #eeff00;
+      --clr-text-pure: #ffffff;
+      --clr-text-main: #e0e0e0;
+      --clr-text-muted: #666666;
+      --border-subtle: rgba(255, 255, 255, 0.1);
+      --border-visible: rgba(255, 255, 255, 0.2);
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --font-display: 'JetBrains Mono', monospace;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--clr-bg);
+      color: var(--clr-text-pure);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 560px;
+      width: 100%;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--clr-surface);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 48px 40px 32px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--clr-acid);
+      border: 1px solid rgba(238, 255, 0, 0.3);
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 0.95;
+      text-transform: uppercase;
+      color: var(--clr-text-pure);
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-family: var(--font-body);
+      font-size: 15px;
+      color: var(--clr-text-muted);
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+
+    .body {
+      padding: 32px 40px;
+    }
+
+    p {
+      font-size: 14px;
+      color: var(--clr-text-main);
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+      line-height: 1.6;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--clr-text-muted);
+      background: rgba(255,255,255,0.03);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .steps li {
+      font-size: 14px;
+      color: var(--clr-text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    .steps li::before {
+      content: '';
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--clr-acid);
+      flex-shrink: 0;
+      margin-top: 7px;
+      box-shadow: 0 0 8px rgba(238, 255, 0, 0.4);
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      padding: 14px 28px;
+      background: var(--clr-text-pure);
+      color: var(--clr-bg);
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .cta:hover {
+      background: var(--clr-acid);
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(238, 255, 0, 0.3);
+    }
+
+    .footer {
+      padding: 24px 40px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--clr-text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .footer-links a {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--clr-text-muted);
+      text-decoration: none;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-subtle);
+      transition: all 150ms ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--clr-text-pure);
+      background: rgba(255,255,255,0.06);
+      border-color: var(--border-visible);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 24px 0;
+    }
+
+    .label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--clr-text-muted);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    @media (max-width: 600px) {
+      .header, .body, .footer {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>You're in.</h1>
+      <p class="subtitle">Account ready. Time to win.</p>
+    </div>
+
+    <div class="body">
+      <p>Hey <span class="mono">{{displayName}}</span>. Your account is ready. Download the app, pick a profile, and hear them first.</p>
+
+      <a href="https://vanysound.com" class="cta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zm7-18l-5.5 5.5 1.4 1.4L11 6.8V16h2V6.8l3.1 3.1 1.4-1.4L12 2z"/></svg>
+        Download for Windows
+      </a>
+
+      <div class="divider"></div>
+
+      <span class="label">Next steps</span>
+      <ul class="steps">
+        <li>Install the driver.</li>
+        <li>Pick your EQ for Warzone.</li>
+        <li>You don't need external applications, Just VanySound.</li>
+      </ul>
+
+      <a href="https://www.youtube.com/channel/UCiZBEYESPBbIoTlWIysTtsA" class="cta">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.5 31.5 0 0 0 0 12a31.5 31.5 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14c1.88.55 9.38.55 9.38.55s7.5 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.5 31.5 0 0 0 24 12a31.5 31.5 0 0 0-.5-5.81zM9.55 15.5V8.5l6.27 3.5-6.27 3.5z"/></svg>
+        See a tutorial
+      </a>
+    </div>
+
+    <div class="footer">
+      <a href="https://vanysound.com" class="footer-brand" style="text-decoration:none;color:var(--clr-text-muted);">vanysound.com</a>
+      <div class="footer-links">
+        <a href="https://discord.gg/uw3XTNmPWr" aria-label="Discord">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.3 4.4C18.8 3.7 17.2 3.2 15.5 3c-.2.4-.5.8-.7 1.2-1.8-.3-3.6-.3-5.5 0-.2-.4-.4-.8-.7-1.2-1.7.2-3.3.7-4.8 1.4-3 4.5-3.8 8.8-3.4 13.1 2 1.5 3.9 2.4 5.8 3 .5-.6.9-1.3 1.2-2.1-.7-.3-1.3-.6-1.9-1 .1-.1.3-.2.4-.3 3.8 1.8 7.9 1.8 11.6 0 .1.1.3.2.4.3-.6.4-1.2.7-1.9 1 .3.8.7 1.5 1.2 2.1 1.9-.6 3.8-1.5 5.8-3 .4-4.3-.4-8.6-3.4-13.1zM9 14.6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm6 0c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+        </a>
+        <a href="https://x.com/VanySound" aria-label="X">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a href="https://www.youtube.com/channel/UCiZBEYESPBbIoTlWIysTtsA" aria-label="YouTube">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.55A3.02 3.02 0 0 0 .5 6.19 31.5 31.5 0 0 0 0 12a31.5 31.5 0 0 0 .5 5.81 3.02 3.02 0 0 0 2.12 2.14c1.88.55 9.38.55 9.38.55s7.5 0 9.38-.55a3.02 3.02 0 0 0 2.12-2.14A31.5 31.5 0 0 0 24 12a31.5 31.5 0 0 0-.5-5.81zM9.55 15.5V8.5l6.27 3.5-6.27 3.5z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

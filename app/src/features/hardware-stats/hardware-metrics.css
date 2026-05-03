@@ -1,0 +1,123 @@
+.hud-panel {
+  width: 280px;
+  background: rgba(11, 17, 32, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid var(--clr-acid);
+  padding: 24px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-elevated);
+  position: relative;
+  overflow: hidden;
+}
+
+.hud-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, var(--clr-acid), transparent);
+}
+
+.hud-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.text-purple {
+  color: var(--clr-acid);
+}
+
+.text-yellow {
+  color: var(--clr-acid);
+  text-shadow: 0 0 10px rgba(238, 255, 0, 0.35);
+}
+
+.telemetry-block {
+  margin-bottom: 20px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 6px;
+}
+
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.metric-bar {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 1px;
+}
+
+.metric-fill {
+  height: 100%;
+  background: var(--clr-acid);
+  box-shadow: 0 0 8px rgba(238, 255, 0, 0.3);
+  border-radius: 1px;
+}
+
+.metric-fill.yellow {
+  background: var(--clr-acid);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+}
+
+.telemetry-block.highlight {
+  padding: 12px;
+  background: rgba(238, 255, 0, 0.03);
+  border: 1px solid rgba(238, 255, 0, 0.1);
+  border-radius: var(--radius-sm);
+  margin-top: 32px;
+}
+
+.telemetry-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.stat-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.pill-val {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pill-lbl {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}

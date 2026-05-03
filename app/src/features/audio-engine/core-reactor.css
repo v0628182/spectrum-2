@@ -1,0 +1,162 @@
+.reactor-wrapper {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  border-radius: 50%;
+}
+
+.reactor-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+  transition: all 0.5s var(--ease-snappy);
+}
+
+.reactor-ring.outer {
+  width: 320px;
+  height: 320px;
+  border-color: rgba(238, 255, 0, 0.12);
+}
+
+.reactor-ring.inner {
+  width: 250px;
+  height: 250px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  animation: spin-slow 30s linear infinite;
+}
+
+.dial-tick {
+  position: absolute;
+  top: 0; left: 50%;
+  width: 2px; height: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  transform-origin: 0 125px;
+}
+
+.reactor-core {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  transition: all 0.2s var(--ease-snappy);
+}
+
+.core-background {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle, rgba(238, 255, 0, 0.15) 0%, var(--bg-surface) 100%);
+  opacity: 0.5;
+  transition: opacity 0.5s;
+}
+
+.core-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.core-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(255,255,255,0.2);
+  transition: all 0.3s;
+}
+
+.core-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+  transition: all 0.3s;
+}
+
+/* ACTIVE STATE */
+.reactor-wrapper.is-active .reactor-core {
+  border-color: var(--clr-acid);
+  box-shadow: 0 0 60px rgba(238, 255, 0, 0.25), inset 0 0 40px rgba(238, 255, 0, 0.15);
+  transform: scale(1.05);
+}
+
+.reactor-wrapper.is-active .core-background {
+  background: radial-gradient(circle, rgba(238, 255, 0, 0.2) 0%, transparent 100%);
+  opacity: 1;
+}
+
+.reactor-wrapper.is-active .core-title {
+  color: var(--clr-acid);
+  text-shadow: 0 0 20px rgba(238, 255, 0, 0.5);
+}
+
+.reactor-wrapper.is-active .core-status {
+  color: var(--text-primary);
+}
+
+.reactor-wrapper.is-active .reactor-ring.outer {
+  border-color: rgba(238, 255, 0, 0.35);
+  box-shadow: 0 0 40px rgba(238, 255, 0, 0.1);
+  animation: pulse-ring 2s infinite;
+}
+
+.reactor-wrapper.is-active .reactor-ring.inner {
+  border-color: rgba(238, 255, 0, 0.6);
+  animation: spin-fast 4s linear infinite;
+}
+
+.reactor-wrapper.is-active .dial-tick {
+  background: var(--clr-acid);
+  box-shadow: 0 0 10px var(--clr-acid);
+}
+
+/* Shockwaves */
+.shockwave {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--clr-acid);
+  pointer-events: none;
+  animation: shockwave-anim 2s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+}
+
+.sw-1 { width: 180px; height: 180px; animation-delay: 0s; }
+.sw-2 { width: 180px; height: 180px; animation-delay: 1s; }
+
+@keyframes shockwave-anim {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+@keyframes spin-slow {
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes spin-fast {
+  100% { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.05); }
+}

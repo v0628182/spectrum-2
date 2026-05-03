@@ -1,0 +1,170 @@
+import { useEffect, useState } from 'react';
+import { Shield } from 'lucide-react';
+import { MainHUD } from './pages/MainHUD';
+import { AuthHUD } from './pages/AuthHUD';
+import { InstallerHUD } from './pages/InstallerHUD';
+import { echoAudioApi } from './lib/echoaudio';
+import { CustomTitlebar } from './widgets/CustomTitlebar';
+import './index.css';
+import './shared/ui.css';
+import './pages/installer.css';
+
+type InstallPhase = 'checking' | 'needs-install' | 'ready';
+type AuthSurface = 'login' | 'installer';
+const INSTALL_BYPASS_KEY = 'echoaudio.install-bypass';
+
+function readInstallBypass(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.localStorage.getItem(INSTALL_BYPASS_KEY) === 'true';
+}
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [installPhase, setInstallPhase] = useState<InstallPhase>('checking');
+  const [installBypassEnabled, setInstallBypassEnabled] = useState(readInstallBypass);
+  const [authSurface, setAuthSurface] = useState<AuthSurface>('login');
+
+  const enableInstallBypass = () => {
+    console.info('[app] install bypass enabled');
+    window.localStorage.setItem(INSTALL_BYPASS_KEY, 'true');
+    setInstallBypassEnabled(true);
+    setInstallPhase('ready');
+  };
+
+  useEffect(() => {
+    console.info('[app] mounted');
+  }, []);
+
+  useEffect(() => {
+    console.info('[app] state', {
+      installBypassEnabled,
+      installPhase,
+      isAuthenticated,
+    });
+  }, [installBypassEnabled, installPhase, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    if (installBypassEnabled) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    echoAudioApi
+      .refreshRuntime()
+      .then((runtime) => {
+        if (!cancelled) {
+          console.info('[app] runtime check resolved', {
+            installed: runtime.installed,
+            needsInstallation: runtime.needsInstallation,
+            runtimeError: runtime.runtimeError,
+            verifyOk: runtime.verifyOk,
+          });
+          setInstallPhase(runtime.installed ? 'ready' : 'needs-install');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          console.warn('[app] runtime check failed, forcing installer flow');
+          setInstallPhase('needs-install');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [installBypassEnabled, isAuthenticated]);
+
+  if (!isAuthenticated) {
+    if (authSurface === 'installer') {
+      return (
+        <InstallerHUD
+          completeLabel="BACK TO SIGN IN"
+          skipLabel="Skip installation for now"
+          successSubtitle="Installation finished. Return to sign in when you are ready."
+          successDetail="EchoAudio is installed locally. Sign in to continue into the desktop panel."
+          onComplete={() => {
+            setInstallPhase('checking');
+            setAuthSurface('login');
+          }}
+          onSkipInstall={() => {
+            enableInstallBypass();
+            setInstallPhase('ready');
+            setAuthSurface('login');
+          }}
+        />
+      );
+    }
+
+    return (
+      <AuthHUD
+        onLogin={() => {
+          setInstallPhase('checking');
+          setAuthSurface('login');
+          setIsAuthenticated(true);
+        }}
+        onOpenInstaller={() => {
+          setInstallPhase('checking');
+          setAuthSurface('installer');
+        }}
+        onSkipInstall={() => {
+          enableInstallBypass();
+          setAuthSurface('login');
+          setIsAuthenticated(true);
+        }}
+      />
+    );
+  }
+
+  if (installPhase === 'checking') {
+    return (
+      <div className="installer-container">
+        <CustomTitlebar />
+        <div className="installer-centered-content">
+          <div className="installer-brand-mark">
+            <div className="brand-icon scanning">
+              <Shield size={48} strokeWidth={1.5} />
+            </div>
+            <div className="brand-ring"></div>
+          </div>
+
+          <div className="installer-typography">
+            <h1 className="installer-main-heading">SYNCING LOCAL STATE</h1>
+            <p className="installer-sub-heading">Checking the installed EchoAudio runtime.</p>
+            <div className="installer-detail-text">
+              Reading helper status, bundle deployment and endpoint verification.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (installPhase === 'needs-install') {
+    return (
+      <InstallerHUD
+        completeLabel="OPEN PANEL"
+        skipLabel="Open main panel without installation"
+        successSubtitle="Everything is configured. Continue when you are ready."
+        successDetail="Your audio setup is ready to go."
+        onComplete={() => setInstallPhase('ready')}
+        onSkipInstall={enableInstallBypass}
+      />
+    );
+  }
+
+  if (installBypassEnabled) {
+    return <MainHUD />;
+  }
+
+  return <MainHUD />;
+}
+
+export default App;

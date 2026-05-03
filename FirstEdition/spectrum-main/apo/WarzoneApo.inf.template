@@ -1,0 +1,61 @@
+; Warzone Audio Custom APO INF template.
+; Replace all TODO values and split into separate Win10/Win11 packages before release.
+;
+; Windows 11 21H2+:
+;   Class=AudioProcessingObject
+;   ClassGuid={5989fce8-9cd0-467d-8a6a-5419e31529d4}
+;
+; Windows 10:
+;   Class=SoftwareComponent
+;   Use an OS ceiling so this package is not offered to Windows 11.
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=AudioProcessingObject
+ClassGuid={5989fce8-9cd0-467d-8a6a-5419e31529d4}
+Provider=%ManufacturerName%
+DriverVer=05/02/2026,0.1.0.0
+CatalogFile=WarzoneApo.cat
+PnpLockdown=1
+
+[Manufacturer]
+%ManufacturerName%=Standard,NTamd64
+
+[Standard.NTamd64]
+%WarzoneApo.DeviceDesc%=WarzoneApo_Install, APO\VEN_WZA&CID_WARZONE_AUDIO
+
+[WarzoneApo_Install]
+CopyFiles=WarzoneApo.CopyFiles
+AddReg=WarzoneApo.AddReg
+
+[DestinationDirs]
+WarzoneApo.CopyFiles=13
+
+[WarzoneApo.CopyFiles]
+WarzoneApo.dll
+
+[WarzoneApo.AddReg]
+; COM registration. CLSID must match CLSID_WarzoneApoMfx in WarzoneApoSkeleton.h.
+HKR,Classes\CLSID\%WarzoneApo.MfxClsid%,,,%WarzoneApo.MfxFriendlyName%
+HKR,Classes\CLSID\%WarzoneApo.MfxClsid%\InProcServer32,,0x00020000,%%13%%\WarzoneApo.dll
+HKR,Classes\CLSID\%WarzoneApo.MfxClsid%\InProcServer32,ThreadingModel,,"Both"
+
+; Audio engine registration.
+HKR,AudioEngine\AudioProcessingObjects\%WarzoneApo.MfxClsid%,"FriendlyName",,%WarzoneApo.MfxFriendlyName%
+
+; Endpoint association is vendor/virtual-cable specific. Register this CLSID as
+; PKEY_FX_ModeEffectClsid or PKEY_FX_EndpointEffectClsid from the cable driver's
+; componentized extension INF, not globally.
+
+[SourceDisksNames]
+1=%DiskName%,,,
+
+[SourceDisksFiles]
+WarzoneApo.dll=1
+
+[Strings]
+ManufacturerName="Warzone Audio"
+DiskName="Warzone Audio APO Install Disk"
+WarzoneApo.DeviceDesc="Warzone Audio Custom APO"
+WarzoneApo.MfxFriendlyName="Warzone Audio Mode Effect"
+WarzoneApo.MfxClsid="{8F5CC6E6-9B13-43C5-AF42-4C0C7A0B8AF1}"

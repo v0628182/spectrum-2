@@ -1,0 +1,87 @@
+#pragma once
+
+#include <array>
+#include <cstddef>
+
+#include "warzone_audio/Constants.h"
+
+namespace warzone_audio {
+
+struct EngineParams {
+    float footstepEnhance = 65.0f;
+    float actionDetail = 45.0f;
+    float gunshotReduction = 85.0f;
+    float explosionReduction = 90.0f;
+    float detectionSensitivity = 55.0f;
+    float outputCeilingDb = constants::kOutputCeilingDb;
+    float stepBodyBoostDb = 11.0f;
+    float stepClarityBoostDb = constants::kFootstepBoostDbMax;
+    float stepLowBodyBoostDb = 8.0f;
+    float stepLowMidBoostDb = 7.0f;
+    float weaponMidCutDb = -30.0f;
+    float weaponAirCutDb = -28.0f;
+    float sustainedHoldMs = 900.0f;
+    float masterDuckDb = -10.0f;
+    float impactDuckDb = -24.0f;
+    float footstepLevelerAmount = 0.0f;
+    float footstepTargetRmsDb = -24.0f;
+    float footstepMaxLiftDb = 10.0f;
+    float footstepLevelerSpeedMs = 80.0f;
+    float stabilityAmount = 0.0f;
+    float spectralFloorDb = -42.0f;
+    float stableReleaseMs = 220.0f;
+    float footstepGuardAmount = 70.0f;
+    float maxCutStepDb = 48.0f;
+    bool protectionExtreme = true;
+    bool debugLogging = false;
+};
+
+struct BandEnergiesDb {
+    float bass = -120.0f;
+    float lowMid = -120.0f;
+    float mid = -120.0f;
+    float step = -120.0f;
+    float air = -120.0f;
+    float noise = -120.0f;
+    float total = -120.0f;
+};
+
+struct FeatureFrame {
+    BandEnergiesDb energyDb;
+    BandEnergiesDb noiseDb;
+    BandEnergiesDb snrDb;
+
+    float superFluxStep = 0.0f;
+    float superFluxPresence = 0.0f;
+    float superFluxBroadband = 0.0f;
+    float superFluxStepExcess = 0.0f;
+    float superFluxPresenceExcess = 0.0f;
+    float superFluxBroadbandExcess = 0.0f;
+    float centroidHz = 0.0f;
+    float flatnessStep = 0.0f;
+    float crestDb = 0.0f;
+    float inputPeak = 0.0f;
+    float attackStepDb = 0.0f;
+    float attackLowMidDb = 0.0f;
+    float durationMs = 0.0f;
+    float lateral = 0.0f;
+    int activeBands = 0;
+};
+
+struct DetectorScores {
+    float footstep = 0.0f;
+    float action = 0.0f;
+    float protection = 0.0f;
+    float lateral = 0.0f;
+    float confidence = 0.0f;
+    float impact = 0.0f;
+};
+
+struct ProcessStats {
+    DetectorScores scores;
+    FeatureFrame features;
+    float outputPeak = 0.0f;
+    std::size_t framesAnalyzed = 0;
+};
+
+} // namespace warzone_audio

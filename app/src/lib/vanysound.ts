@@ -1,0 +1,287 @@
+import { invoke } from '@tauri-apps/api/core';
+import { openPath, openUrl } from '@tauri-apps/plugin-opener';
+
+export interface ControlStatus {
+  activeProfile: number | null;
+  activeRevision: string | null;
+  bundlePresent: boolean | null;
+  bundleSha256: string | null;
+  configDir: string | null;
+  configMode: string | null;
+  deviceSelectorActive: boolean | null;
+  engineDir: string | null;
+  helperLogPath: string | null;
+  helperPath: string | null;
+  helperVersion: string | null;
+  installHealth: string | null;
+  lastConfirmedRevision: string | null;
+  pluginPath: string | null;
+  pluginPresent: boolean | null;
+  spatialChannelMask: number | null;
+  spatialMode: SpatialMode | null;
+  targetEndpointGuid: string | null;
+  targetEndpointName: string | null;
+  verifyReason: string | null;
+  verifyState: string | null;
+}
+
+export interface RuntimeSnapshot {
+  helperAvailable: boolean;
+  installHealth: string | null;
+  installed: boolean;
+  needsInstallation: boolean;
+  receiptStatus: string | null;
+  receiptVersion: string | null;
+  runtimeError: string | null;
+  status: ControlStatus | null;
+  verify: ControlStatus | null;
+  verifyOk: boolean;
+}
+
+export interface InstallerState {
+  completed: boolean;
+  currentStep: number;
+  detail: string;
+  exitCode: number | null;
+  finishedAt: string | null;
+  headline: string;
+  isInstalled: boolean;
+  logLines: string[];
+  progress: number;
+  running: boolean;
+  startedAt: string | null;
+  success: boolean | null;
+  summary: string;
+}
+
+export interface RadarSnapshot {
+  ambience: number;
+  captureActive: boolean;
+  center: number;
+  channelMask: number;
+  channels: number;
+  farLeft: number;
+  farRight: number;
+  lastError: string | null;
+  lastUpdateMs: number | null;
+  left: number;
+  pan: number;
+  right: number;
+  volume: number;
+}
+
+export interface LogFileSnapshot {
+  key: string;
+  path: string;
+  tail: string[];
+}
+
+export interface LogSnapshot {
+  combinedTail: string[];
+  files: LogFileSnapshot[];
+  logDir: string;
+}
+
+export interface DiagnosticsExport {
+  archivePath: string;
+}
+
+export interface AudioDevice {
+  id: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+export type SpatialMode = 'stereo' | '5.1' | '7.1';
+
+async function safeFrontendLog(level: string, message: string) {
+  try {
+    await invoke('append_frontend_log', { level, message });
+  } catch {
+    // Best effort only.
+  }
+}
+
+function serializeForLog(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function summarizeInvokeResult(result: unknown): string {
+  if (typeof result === 'string') {
+    return `string:length=${result.length}`;
+  }
+
+  if (!result || typeof result !== 'object') {
+    return String(result);
+  }
+
+  const runtime = result as Partial<RuntimeSnapshot>;
+  if ('verifyOk' in runtime || 'status' in runtime || 'verify' in runtime) {
+    return serializeForLog({
+      activeProfile: runtime.status?.activeProfile ?? runtime.verify?.activeProfile ?? null,
+      installed: runtime.installed ?? null,
+      runtimeError: runtime.runtimeError ?? null,
+      verifyOk: runtime.verifyOk ?? null,
+    });
+  }
+
+  const installer = result as Partial<InstallerState>;
+  if ('running' in installer || 'progress' in installer) {
+    return serializeForLog({
+      currentStep: installer.currentStep ?? null,
+      exitCode: installer.exitCode ?? null,
+      progress: installer.progress ?? null,
+      running: installer.running ?? null,
+      success: installer.success ?? null,
+    });
+  }
+
+  const logSnapshot = result as Partial<LogSnapshot>;
+  if ('combinedTail' in logSnapshot || 'files' in logSnapshot) {
+    return serializeForLog({
+      combinedTailLines: logSnapshot.combinedTail?.length ?? null,
+      files: logSnapshot.files?.length ?? null,
+      logDir: logSnapshot.logDir ?? null,
+    });
+  }
+
+  return serializeForLog(result);
+}
+
+interface InvokeOptions {
+  suppressFrontendTrace?: boolean;
+}
+
+async function invokeCommand<T>(
+  command: string,
+  payload?: Record<string, unknown>,
+  options: InvokeOptions = {},
+): Promise<T> {
+  const traceEnabled = !options.suppressFrontendTrace;
+  const payloadText = payload ? serializeForLog(payload) : '{}';
+
+  try {
+    if (traceEnabled) {
+      await safeFrontendLog('debug', `invoke:${command}:start payload=${payloadText}`);
+    }
+    const result = await invoke<T>(command, payload);
+    if (traceEnabled) {
+      await safeFrontendLog('debug', `invoke:${command}:ok result=${summarizeInvokeResult(result)}`);
+    }
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (traceEnabled) {
+      await safeFrontendLog('error', `invoke:${command}:error payload=${payloadText} message=${message}`);
+    }
+    throw error;
+  }
+}
+
+export const vanySoundApi = {
+  appendFrontendLog(level: string, message: string): Promise<boolean> {
+    return invoke<boolean>('append_frontend_log', { level, message });
+  },
+  clearProfile(): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('clear_profile');
+  },
+  exportDiagnostics(): Promise<DiagnosticsExport> {
+    return invokeCommand<DiagnosticsExport>('export_diagnostics');
+  },
+  getInstallerState(): Promise<InstallerState> {
+    return invokeCommand<InstallerState>('get_installer_state');
+  },
+  getDebugReport(): Promise<string> {
+    return invokeCommand<string>('get_debug_report', undefined, { suppressFrontendTrace: true });
+  },
+  getLogSnapshot(): Promise<LogSnapshot> {
+    return invokeCommand<LogSnapshot>('get_log_snapshot', undefined, { suppressFrontendTrace: true });
+  },
+  getRadarSnapshot(): Promise<RadarSnapshot> {
+    return invokeCommand<RadarSnapshot>('get_radar_snapshot', undefined, { suppressFrontendTrace: true });
+  },
+  listAudioOutputs(): Promise<AudioDevice[]> {
+    return invokeCommand<AudioDevice[]>('list_audio_outputs');
+  },
+  setAudioOutput(deviceId: string): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('set_audio_output', { deviceId });
+  },
+  setOverlayEnabled(enabled: boolean): Promise<void> {
+    return invokeCommand<void>('set_overlay_enabled', { enabled });
+  },
+  setMiniRadarEnabled(enabled: boolean): Promise<void> {
+    return invokeCommand<void>('set_mini_radar_enabled', { enabled });
+  },
+  setMiniRadarPosition(position: number): Promise<void> {
+    return invokeCommand<void>('set_mini_radar_position', { position });
+  },
+  openPath(path: string): Promise<void> {
+    return openPath(path);
+  },
+  openExternal(url: string): Promise<void> {
+    return openUrl(url);
+  },
+  async openLogFolder(): Promise<{ path: string }> {
+    const path = await invokeCommand<string>('get_log_root');
+    await openPath(path);
+    return { path };
+  },
+  refreshRuntime(): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('refresh_runtime');
+  },
+  repairDeviceSelector(): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('repair_device_selector');
+  },
+  runInstaller(): Promise<InstallerState> {
+    return invokeCommand<InstallerState>('run_installer');
+  },
+  setSpatialMode(mode: SpatialMode): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('set_spatial_mode', { mode });
+  },
+  switchProfile(profileId: number): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('switch_profile', { profileId });
+  },
+  applyDspConfig(params: Record<string, number>): Promise<RuntimeSnapshot> {
+    return invokeCommand<RuntimeSnapshot>('apply_dsp_config', { params });
+  },
+};
+
+export const profileCatalog = [
+  {
+    description: 'Preamp + MJUCjr tuned for detail and footsteps.',
+    id: 1,
+    label: 'GAMING / FOOTSTEPS',
+  },
+  {
+    description: 'Misa profile with bright GraphicEQ and MJUCjr.',
+    id: 2,
+    label: 'MISA',
+  },
+  {
+    description: 'Loudness correction with dynamic balancing.',
+    id: 3,
+    label: 'LOUDNESS EQ',
+  },
+  {
+    description: 'Full equalization stack with all profile stages.',
+    id: 4,
+    label: 'FULL EQ',
+  },
+] as const;
+
+export function resolveActiveProfile(runtime: RuntimeSnapshot | null): number | null {
+  return runtime?.status?.activeProfile ?? runtime?.verify?.activeProfile ?? null;
+}
+
+export function runtimeDetailValue(value: string | null | undefined, fallback = 'Unavailable'): string {
+  return value && value.trim().length > 0 ? value : fallback;
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "annotation": ".\\captures\\annotations\\aa.3ini.markers.json",
+  "clip": "captures/raw_test/aa.wav",
+  "config": ".\\config\\warzone_reference_v1.ini",
+  "events": [
+    {
+      "kind": "footstep",
+      "timeSeconds": 16.95,
+      "windowSeconds": 0.35,
+      "passed": true,
+      "cutWarning": false,
+      "maxFootstep": 0.60397,
+      "maxProtection": 0.459311,
+      "maxAction": 0.672268,
+      "maxPeak": 0.251189,
+      "peakDropRatio": 0.0281077,
+      "activePeakDropRatio": 0.343986,
+      "activePeakFrames": 28,
+      "nearestFootstep": 0.389913,
+      "nearestProtection": 0.0557114
+    },
+    {
+      "kind": "footstep",
+      "timeSeconds": 21.33,
+      "windowSeconds": 0.35,
+      "passed": true,
+      "cutWarning": true,
+      "maxFootstep": 0.608602,
+      "maxProtection": 0.540622,
+      "maxAction": 0.625666,
+      "maxPeak": 0.186549,
+      "peakDropRatio": 0.0197659,
+      "activePeakDropRatio": 0.0344342,
+      "activePeakFrames": 53,
+      "nearestFootstep": 0.222068,
+      "nearestProtection": 0.0895497
+    },
+    {
+      "kind": "gunshot",
+      "timeSeconds": 28.13,
+      "windowSeconds": 0.5,
+      "passed": true,
+      "cutWarning": false,
+      "maxFootstep": 0.699992,
+      "maxProtection": 0.891669,
+      "maxAction": 0.612155,
+      "maxPeak": 0.251189,
+      "peakDropRatio": 0.0166416,
+      "activePeakDropRatio": 0.0633411,
+      "activePeakFrames": 74,
+      "nearestFootstep": 0.057015,
+      "nearestProtection": 0.658165
+    }
+  ],
+  "passed": true,
+  "framesAnalyzed": 12000
+}

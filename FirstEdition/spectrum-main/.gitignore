@@ -1,0 +1,41 @@
+# Build outputs
+build/
+*.exe
+*.dll
+*.pdb
+*.obj
+*.o
+
+# Runtime logs and generated audio
+logs/
+captures/raw/
+captures/raw_test/
+captures/processed/
+captures/processed_test/
+captures/processed_batch/
+captures/ui_processed/
+captures/logs/
+captures/logs_test/
+captures/logs_batch/
+captures/ui_logs/
+
+# Audio clips and large media
+*.wav
+*.mp3
+*.mp4
+*.m4a
+*.flac
+
+# Keep lightweight calibration metadata
+!captures/
+!captures/annotations/
+!captures/annotations/*.json
+!captures/validation/
+!captures/validation/*.json
+
+# Local/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/

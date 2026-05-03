@@ -1,0 +1,132 @@
+.dashboard-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.dashboard-header {
+  margin-bottom: 32px;
+}
+
+.dashboard-title {
+  color: var(--text-primary);
+  font-size: 28px;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.dashboard-subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dashboard-scroll-area {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* Hardware Stats */
+.hw-stat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hw-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hw-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+}
+
+.hw-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  align-self: flex-end;
+  margin-top: -24px;
+}
+
+.progress-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--clr-acid);
+  box-shadow: var(--glow-accent);
+  border-radius: 2px;
+}
+
+.progress-bar-fill.yellow {
+  background: var(--clr-acid);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.3);
+}
+
+/* Profile Selector */
+.profile-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--dur-fast);
+}
+
+.profile-item:hover {
+  background: rgba(238, 255, 0, 0.04);
+}
+
+.profile-item.active {
+  background: rgba(238, 255, 0, 0.06);
+  border-color: rgba(238, 255, 0, 0.25);
+}
+
+.profile-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.profile-item.active .profile-name {
+  color: var(--clr-acid);
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, var(--clr-acid) 0%, var(--clr-violet-dim) 100%);
+  color: white;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}

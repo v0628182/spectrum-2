@@ -1,0 +1,207 @@
+/* ============================================================
+   HUD LAYOUT & COMPONENT STYLES — Precision Obsidian
+   ============================================================ */
+
+.optimizer-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-base); /* #08090a Linear Canvas */
+  overflow: hidden;
+}
+
+.optimizer-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 40px; /* Increased for generous whitespace (Linear) */
+  gap: 32px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── The Monolith Header ── */
+.vanysound-monolith {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0 48px 0;
+  gap: 12px;
+  position: relative;
+  user-select: none;
+}
+
+.vany-brand {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--clr-silver);
+  text-transform: uppercase;
+  margin: 0;
+  line-height: 1;
+  transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  text-shadow: 0 0 0 transparent;
+}
+
+.vany-brand.active {
+  color: var(--clr-pure);
+  text-shadow: 0 0 30px rgba(238, 255, 0, 0.6);
+}
+
+.vany-status {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 300ms ease;
+}
+
+.vany-status.visible {
+  opacity: 1;
+  transform: translateY(0);
+  color: var(--clr-acid);
+}
+
+/* ── Main Grid ── */
+.opt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Base Card Style for Features */
+/* Overrides for specific cards placed in grid */
+.opt-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-visible);
+  border-radius: var(--radius-lg);
+  padding: 24px 24px 56px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  transition: border-color var(--dur-normal), background var(--dur-normal);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  /* Inset shadow (Linear style) */
+  box-shadow: var(--inset-panel);
+}
+
+.opt-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.opt-card.glow-panel-yellow {
+  border-color: rgba(255, 192, 0, 0.2);
+}
+
+.opt-card.glow-panel-acid {
+  border-color: rgba(238, 255, 0, 0.2);
+}
+
+/* Generic Header */
+.opt-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.opt-card-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-transform: capitalize; /* Linear doesn't shout everywhere */
+}
+
+/* Generic DB Status Footer inside Cards */
+.eq-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  flex-shrink: 0;
+}
+
+.eq-status-indicator {
+  width: 6px;
+  height: 6px;
+  background: var(--clr-acid);
+  border-radius: 50%;
+  box-shadow: var(--glow-accent);
+}
+
+.eq-status-indicator.offline {
+  background: var(--text-muted);
+  box-shadow: none;
+}
+
+.eq-status-indicator.yellow {
+  background: var(--clr-acid);
+  box-shadow: 0 0 8px rgba(255, 192, 0, 0.5);
+}
+
+.eq-status-indicator.violet {
+  background: var(--clr-acid);
+  box-shadow: 0 0 8px rgba(238, 255, 0, 0.5);
+}
+
+.eq-status-indicator.clean {
+  background: var(--clr-acid);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+/* ── Footer Stats ── */
+.opt-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.footer-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.metric-val {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}

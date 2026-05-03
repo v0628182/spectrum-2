@@ -1,0 +1,50 @@
+import { Crosshair, Headphones, Shield, Sparkles } from 'lucide-react';
+
+export type PresetId = 'gaming' | 'misa' | 'loudness' | 'fullEq';
+
+export const DEFAULT_PRESET: PresetId = 'gaming';
+
+export const PRESET_TO_PROFILE: Partial<Record<PresetId, number>> = {
+  fullEq: 4,
+  gaming: 1,
+  loudness: 3,
+  misa: 2,
+};
+
+export const PROFILE_TO_PRESET: Record<number, PresetId> = {
+  1: 'gaming',
+  2: 'misa',
+  3: 'loudness',
+  4: 'fullEq',
+};
+
+export const ROUTING_PRESETS = [
+  {
+    id: 'gaming' as const,
+    name: 'GAMING / FOOTSTEPS',
+    desc: 'Preamp +7.7 dB, MJUCjr 0.5, HP 118 Hz + strategy',
+    icon: Crosshair,
+    profileId: 1,
+  },
+  {
+    id: 'misa' as const,
+    name: 'MISA',
+    desc: 'Preamp -7.5 dB, MJUCjr, GraphicEQ brillante',
+    icon: Sparkles,
+    profileId: 2,
+  },
+  {
+    id: 'loudness' as const,
+    name: 'LOUDNESS EQ',
+    desc: 'MJUCjr 0.475, HP 70 Hz, GraphicEQ correction',
+    icon: Shield,
+    profileId: 3,
+  },
+  {
+    id: 'fullEq' as const,
+    name: 'FULL EQ',
+    desc: 'GraphicEQ completo + LoudnessCorrection',
+    icon: Headphones,
+    profileId: 4,
+  },
+];

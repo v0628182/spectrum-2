@@ -1,0 +1,127 @@
+.audio-engine-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.engine-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.engine-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  transition: color var(--dur-normal);
+}
+
+.text-yellow {
+  color: var(--clr-acid);
+  text-shadow: 0 0 10px rgba(238, 255, 0, 0.4);
+}
+
+.engine-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.toggle-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+/* Radar Animation */
+.spatial-visualizer {
+  height: 120px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.headset-icon {
+  font-size: 32px;
+  z-index: 2;
+  text-shadow: 0 0 20px rgba(238, 255, 0, 0.5);
+}
+
+.radar {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  opacity: 0;
+}
+
+.radar-scanning {
+  opacity: 1;
+}
+
+.radar-scanning::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  width: 100px; height: 100px;
+  transform-origin: bottom left;
+  background: conic-gradient(from 0deg, rgba(238, 255, 0, 0.35) 0deg, transparent 90deg);
+  animation: radar-spin 2s linear infinite;
+}
+
+@keyframes radar-spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* Scanline Effect */
+.engine-active-card {
+  position: relative;
+}
+
+.scanline-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(238, 255, 0, 0.04) 51%,
+    transparent 51%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 10;
+  animation: scan 10s linear infinite;
+}
+
+@keyframes scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
