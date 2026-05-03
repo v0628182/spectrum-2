@@ -65,8 +65,10 @@ private:
     bool weaponOnlyMode_ = false;
     float virtualWeaponMask_ = 0.0f;
     float virtualProtectMask_ = 0.0f;
+    float tailCleanAmount_ = 0.0f;
     float transientGate_ = 0.0f;
     float transientState_ = 0.0f;
+    float tailState_ = 0.0f;
     float probeWeaponEnv_ = 0.0f;
     float probeStepEnv_ = 0.0f;
     float sustainedWeaponState_ = 0.0f;

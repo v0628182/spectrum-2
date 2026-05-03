@@ -81,8 +81,10 @@ void Processor::reset()
     weaponOnlyMode_ = false;
     virtualWeaponMask_ = 0.0f;
     virtualProtectMask_ = 0.0f;
+    tailCleanAmount_ = 0.0f;
     transientGate_ = 0.0f;
     transientState_ = 0.0f;
+    tailState_ = 0.0f;
     probeWeaponEnv_ = 0.0f;
     probeStepEnv_ = 0.0f;
     sustainedWeaponState_ = 0.0f;
@@ -359,6 +361,11 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
         weaponOnlyMode ? targetVirtualProtectMask : 0.0f,
         0.35f,
         weaponOnlyMode ? clamp(params.protectionReleaseMs * 1.5f, 4.0f, 28.0f) : 18.0f);
+    tailCleanAmount_ = approachDb(
+        tailCleanAmount_,
+        weaponOnlyMode ? clamp(-params.residualReductionDb / 12.0f, 0.0f, 1.0f) : 0.0f,
+        0.5f,
+        24.0f);
 
     const float levelerAmount = clamp(params.footstepLevelerAmount / 100.0f, 0.0f, 1.0f);
     const float levelerAllowed =
@@ -461,16 +468,22 @@ void Processor::processSample(float inL, float inR, float& outL, float& outR, fl
         const float maskA = saturate(std::max(virtualWeaponMask_, transientGate_ * 0.90f) *
                                      (0.58f + 0.42f * envContrast));
         const float maskB = saturate(virtualProtectMask_ * (0.72f + 0.28f * protectContrast));
-        const float weaponOnlyMix = wetMix_ * maskA * (1.0f - 0.92f * maskB);
-        const float transientGain = lerp(1.0f, dbToAmp(-20.0f), transientGate_ * (1.0f - 0.65f * maskB));
+        const float tailClean = tailCleanAmount_ * maskA * (1.0f - maskB);
+        const float weaponOnlyMix = wetMix_ * maskA * (1.0f - 0.92f * maskB) * lerp(1.0f, 0.86f, tailCleanAmount_);
+        const float transientDepthDb = lerp(-20.0f, -15.0f, tailCleanAmount_);
+        const float transientGain = lerp(1.0f, dbToAmp(transientDepthDb), transientGate_ * (1.0f - 0.65f * maskB));
         const float transientShaped = transientState_ + transientOnly * transientGain;
         float weaponMid = weaponBodyMask_.process(transientShaped);
         weaponMid = weaponCrackMask_.process(weaponMid);
         weaponMid = weaponAirMask_.process(weaponMid);
-        const float extraCancel = 0.22f * maskA * (1.0f - maskB);
+        const float extraCancel = lerp(0.22f, 0.10f, tailCleanAmount_) * maskA * (1.0f - maskB);
         const float maskedMid = transientShaped + (weaponMid - transientShaped) * weaponOnlyMix;
         const float cancelledMid = maskedMid - (transientShaped - weaponMid) * extraCancel;
-        const float mixedMid = cancelledMid + (midIn - cancelledMid) * (maskB * 0.82f);
+        const float tailAlpha = std::exp(-1.0f / (constants::kSampleRate * 0.0035f));
+        tailState_ = tailAlpha * tailState_ + (1.0f - tailAlpha) * cancelledMid;
+        const float deRungMid = cancelledMid - tailState_ * (0.18f * tailClean);
+        const float breathBack = midIn * (0.06f * tailClean * (1.0f - transientGate_));
+        const float mixedMid = deRungMid + breathBack + (midIn - deRungMid) * (maskB * 0.82f);
         outL = clamp(mixedMid + sideIn, -ceilingAmp_, ceilingAmp_);
         outR = clamp(mixedMid - sideIn, -ceilingAmp_, ceilingAmp_);
         peak = std::max(peak, std::max(std::abs(outL), std::abs(outR)));
