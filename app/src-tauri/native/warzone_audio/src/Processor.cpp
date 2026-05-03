@@ -119,22 +119,29 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     float targetStepBody = params.stepBodyBoostDb * footstepAmount * scores.footstep;
     float targetStep = (params.stepClarityBoostDb + params.stftPreserveDb) * footstepAmount * scores.footstep;
     float targetAir = constants::kActionBoostDbMax * actionAmount * std::max(scores.action, scores.footstep * 0.5f);
-    float targetMasterDuck = params.masterDuckDb * gunAmount * extremeScale * weaponDuck;
+    float targetMasterDuck = 0.0f;
     maskCutoffHz_ = clamp(params.stftCutoffHz, 500.0f, 8000.0f);
 
     const float footstepBodyPreserve = footstepAmount * scores.footstep * (1.0f - weaponDuck * lerp(0.35f, 0.12f, guardAmount));
     targetLowShelf += params.stepLowBodyBoostDb * footstepBodyPreserve;
     targetLowMid += params.stepLowMidBoostDb * footstepBodyPreserve;
 
+    const float footstepEscape = clamp(1.0f - lerp(0.70f, 0.95f, guardAmount) * footstepPresence, 0.05f, 1.0f);
+    const float weaponDepthDb = -std::min(params.masterDuckDb, 0.0f) * gunAmount * extremeScale * weaponDuck;
+    targetLowMid += -weaponDepthDb * 0.28f * footstepEscape;
+    targetWeaponMid += -weaponDepthDb * 0.95f;
+    targetAir += -weaponDepthDb * 0.72f * footstepEscape;
+
     if (protectionForCuts > constants::kProtectionTrigger || weaponDuck > 0.0f) {
         const float hardProtect = std::max(protectionForCuts, weaponDuck);
-        targetLowShelf += -24.0f * explosionAmount * extremeScale * hardProtect;
-        targetLowMid += -24.0f * gunAmount * extremeScale * hardProtect;
+        const float lowBandProtectScale = lerp(1.0f, 0.28f, footstepPresence * guardAmount);
+        targetLowShelf += -24.0f * explosionAmount * extremeScale * hardProtect * lowBandProtectScale;
+        targetLowMid += -24.0f * gunAmount * extremeScale * hardProtect * lowBandProtectScale;
         targetWeaponMid += -18.0f * gunAmount * extremeScale * hardProtect;
         targetAir = std::min(targetAir, 0.0f) + params.weaponAirCutDb * gunAmount * extremeScale * hardProtect;
-        targetLowMid += residualCut * hardProtect * 0.65f;
+        targetLowMid += residualCut * hardProtect * 0.65f * lowBandProtectScale;
         targetWeaponMid += residualCut * hardProtect;
-        targetAir += residualCut * hardProtect * 0.85f;
+        targetAir += residualCut * hardProtect * 0.85f * footstepEscape;
 
         // Keep the core footstep band alive; gunshots are broadband, but footsteps need 2.5-5 kHz.
         const float protectedStepBoost =
@@ -147,16 +154,20 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     }
 
     if (impactBlock > 0.0f) {
-        targetLowShelf += -36.0f * impactBlock;
-        targetLowMid += -30.0f * impactBlock;
+        const float impactFootstepEscape = clamp(1.0f - lerp(0.75f, 0.96f, guardAmount) * confirmedFootstep, 0.04f, 1.0f);
+        const float impactDepthDb = -std::min(params.impactDuckDb, 0.0f) * impactBlock;
+        targetLowShelf += -36.0f * impactBlock * impactFootstepEscape;
+        targetLowMid += -30.0f * impactBlock * impactFootstepEscape;
         targetWeaponMid += -24.0f * impactBlock;
-        targetAir += -22.0f * impactBlock;
+        targetAir += -22.0f * impactBlock * impactFootstepEscape;
+        targetWeaponMid += -impactDepthDb * 0.90f;
+        targetAir += -impactDepthDb * 0.62f * impactFootstepEscape;
+        targetLowMid += -impactDepthDb * 0.18f * impactFootstepEscape;
         targetWeaponMid += residualCut * impactBlock;
-        targetAir += residualCut * impactBlock * 0.75f;
+        targetAir += residualCut * impactBlock * 0.75f * impactFootstepEscape;
         if (confirmedFootstep < 0.35f) {
             targetStep = std::min(targetStep, 1.5f * footstepAmount * scores.footstep);
         }
-        targetMasterDuck += params.impactDuckDb * impactBlock;
     }
 
     targetLowShelf = clampCutFloor(targetLowShelf, floorDb);

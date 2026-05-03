@@ -6,10 +6,12 @@ Proyecto VanySound/Spectrum con:
 - Motor DSP FirstEdition integrado en `app/src-tauri/native/warzone_audio/`.
 - DSP Engine realtime aplicado solo al flujo capturado del cable antes de reproducirse en audifonos.
 - Preset `Mejor OPC`.
+- Preset `Arma Selectiva - Pasos Vivos`, con reduccion de arma por bandas y pasos protegidos.
 - Guardado, carga y borrado de presets personalizados desde DSP Engine Control.
 - Spectrum Analyzer realtime de 32 bandas basado en el audio capturado del cable.
 - Ruta low-latency con paquetes de 128 frames, buffer de render minimo WASAPI cuando el driver lo permite y cola corta que descarta audio viejo en vez de acumular delay.
 - Control avanzado de cambio/sutileza: intensidad global, mezcla wet/dry, frecuencias exactas, Q por banda, ataques/releases, limiter release y stereo width.
+- Los controles `masterDuckDb` e `impactDuckDb` se usan como profundidad selectiva de arma/impacto, no como mute global del output.
 - Controles DSP extra activos: output trim, residual reduction, balance low/mid/high, STFT cutoff/preserve, transient kill, spectral mask y protection pasos.
 - Paquete instalador actualizado en `release/VanySound_Setup_TRANSFER_1.0.12.zip`.
 

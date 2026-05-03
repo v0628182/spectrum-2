@@ -18,7 +18,9 @@ La app incluye:
 - DSP Engine realtime con el core FirstEdition.
 - Spectrum Analyzer de 32 bandas leyendo el audio real del cable.
 - Preset `Mejor OPC` y presets personalizados con nombre.
+- Preset `Arma Selectiva - Pasos Vivos` para reducir arma sin bajar todo el juego.
 - Controles avanzados: nivel de cambio, sutileza, wet/dry, frecuencias, Q por banda, ataques/releases, limiter release y stereo width.
+- Reduccion de disparos por bandas de arma, sin duck global dinamico que tape pasos.
 - Ruta de baja latencia con paquetes de 128 frames y render WASAPI de periodo minimo cuando el driver lo permite.
 
 El empaquetado puede fallar al final si no existe `TAURI_SIGNING_PRIVATE_KEY`; el EXE/MSI/setup se generan antes del paso de firma.
