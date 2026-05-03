@@ -57,7 +57,7 @@ void Processor::reset()
     weaponAirFreqHz_ = 6500.0f;
     weaponAirQ_ = 1.00f;
     wetMix_ = 1.0f;
-    limiterReleaseMs_ = 50.0f;
+    limiterReleaseMs_ = 0.5f;
     stereoWidth_ = 1.0f;
     weaponOnlyMode_ = false;
     sustainedWeaponState_ = 0.0f;
@@ -83,16 +83,23 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
                  clamp(params.protectionPasos / 100.0f, 0.0f, 1.0f));
     const float floorDb = clamp(lerp(params.spectralFloorDb, params.spectralFloorStab, stability), -60.0f, -12.0f);
     const float lookaheadAssist = clamp(params.lookaheadMs / 2.0f, 0.0f, 1.0f);
-    const float baseProtectionAttackMs = lerp(params.protectionAttackMs, 0.5f, lookaheadAssist);
-    const float protectionAttackMs =
-        clamp(lerp(baseProtectionAttackMs, baseProtectionAttackMs * 1.85f, subtlety * 0.45f), 0.5f, 90.0f);
-    const float protectionReleaseMs =
-        clamp(lerp(params.protectionReleaseMs, std::max(150.0f, params.stableReleaseMs), stability * 0.35f), 25.0f, 900.0f);
-    const float boostAttackMs = clamp(lerp(params.boostAttackMs, params.boostAttackMs * 1.70f, subtlety * 0.35f), 0.5f, 90.0f);
-    const float boostReleaseMs = clamp(lerp(params.boostReleaseMs, 260.0f, subtlety * 0.50f), 20.0f, 900.0f);
+    const float baseProtectionAttackMs = lerp(params.protectionAttackMs, 0.1f, lookaheadAssist);
+    float protectionAttackMs =
+        clamp(lerp(baseProtectionAttackMs, baseProtectionAttackMs * 1.85f, subtlety * 0.45f), 0.1f, 90.0f);
+    float protectionReleaseMs =
+        clamp(lerp(params.protectionReleaseMs, std::max(150.0f, params.stableReleaseMs), stability * 0.35f), 5.0f, 900.0f);
+    float boostAttackMs = clamp(lerp(params.boostAttackMs, params.boostAttackMs * 1.70f, subtlety * 0.35f), 0.1f, 90.0f);
+    float boostReleaseMs = clamp(lerp(params.boostReleaseMs, 260.0f, subtlety * 0.50f), 5.0f, 900.0f);
+    if (params.weaponOnlyMode >= 0.5f) {
+        protectionAttackMs = clamp(params.protectionAttackMs, 0.1f, 12.0f);
+        protectionReleaseMs = clamp(params.protectionReleaseMs, 0.5f, 80.0f);
+        boostAttackMs = clamp(params.boostAttackMs, 0.1f, 12.0f);
+        boostReleaseMs = clamp(params.boostReleaseMs, 0.5f, 80.0f);
+    }
     const float maxCutStepDb = lerp(48.0f, clamp(params.maxCutStepDb, 3.0f, 24.0f), stability);
     const float maxRecoverStepDb = lerp(48.0f, std::max(2.0f, maxCutStepDb * 0.45f), stability);
 
+    const bool weaponOnlyMode = params.weaponOnlyMode >= 0.5f;
     const float protection = scores.protection;
     const float confirmedFootstep = ramp(scores.footstep, 0.45f, 0.72f);
     const float transientAmount = clamp(params.transientKill / 100.0f, 0.0f, 1.0f);
@@ -105,15 +112,19 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float footstepPresence = ramp(scores.footstep, 0.32f, 0.66f);
     const float actionAsWeapon = ramp(scores.action, 0.46f, 0.76f) * (1.0f - lerp(0.85f, 0.96f, guardAmount) * footstepPresence);
     const float sustainedEnergy = std::max(actionAsWeapon, ramp(protectionForCuts, 0.18f, 0.55f));
-    sustainedWeaponState_ = approachDb(sustainedWeaponState_, sustainedEnergy, 1.0f, params.sustainedHoldMs);
+    const float sustainedReleaseMs = weaponOnlyMode ? clamp(params.sustainedHoldMs, 0.5f, 120.0f) : params.sustainedHoldMs;
+    sustainedWeaponState_ = approachDb(sustainedWeaponState_, sustainedEnergy, 0.25f, sustainedReleaseMs);
 
-    const float weaponDuck = std::max(ramp(protectionForCuts, 0.32f, 0.78f), sustainedWeaponState_ * 0.85f);
+    const float instantWeaponDuck = std::max(
+        std::max(ramp(protectionForCuts, 0.32f, 0.78f), rawImpactBlock),
+        ramp(scores.action, 0.55f, 0.86f));
+    const float weaponDuck =
+        weaponOnlyMode ? instantWeaponDuck : std::max(ramp(protectionForCuts, 0.32f, 0.78f), sustainedWeaponState_ * 0.85f);
     const float footstepWeaponOverlap =
         clamp(std::max(weaponDuck, rawImpactBlock) * footstepPresence * guardAmount, 0.0f, 1.0f);
     const float extremeScale = params.protectionExtreme ? 1.0f : 0.55f;
-    const bool weaponOnlyMode = params.weaponOnlyMode >= 0.5f;
     wetMix_ = clamp(params.wetMix / 100.0f, 0.0f, 1.0f);
-    limiterReleaseMs_ = clamp(params.limiterReleaseMs, 5.0f, 250.0f);
+    limiterReleaseMs_ = clamp(params.limiterReleaseMs, 0.5f, 250.0f);
     stereoWidth_ = clamp(params.stereoWidth / 100.0f, 0.50f, 1.60f);
     weaponOnlyMode_ = weaponOnlyMode;
 

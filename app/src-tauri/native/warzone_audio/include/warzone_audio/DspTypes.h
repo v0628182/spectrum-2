@@ -20,7 +20,7 @@ struct EngineParams {
     float stepLowMidBoostDb = 7.0f;
     float weaponMidCutDb = -30.0f;
     float weaponAirCutDb = -28.0f;
-    float sustainedHoldMs = 900.0f;
+    float sustainedHoldMs = 0.5f;
     float masterDuckDb = -10.0f;
     float impactDuckDb = -24.0f;
     float footstepLevelerAmount = 0.0f;
@@ -58,11 +58,11 @@ struct EngineParams {
     float stepClarityQ = 1.85f;
     float weaponAirFreqHz = 6500.0f;
     float weaponAirQ = 1.00f;
-    float protectionAttackMs = 5.0f;
-    float protectionReleaseMs = 170.0f;
-    float boostAttackMs = 8.0f;
-    float boostReleaseMs = 160.0f;
-    float limiterReleaseMs = 50.0f;
+    float protectionAttackMs = 0.5f;
+    float protectionReleaseMs = 0.5f;
+    float boostAttackMs = 0.5f;
+    float boostReleaseMs = 0.5f;
+    float limiterReleaseMs = 0.5f;
     float stereoWidth = 100.0f;
     bool protectionExtreme = true;
     bool spectralMaskEnabled = true;

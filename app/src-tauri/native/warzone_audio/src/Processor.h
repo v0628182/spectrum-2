@@ -49,7 +49,7 @@ private:
     float weaponAirFreqHz_ = 6500.0f;
     float weaponAirQ_ = 1.00f;
     float wetMix_ = 1.0f;
-    float limiterReleaseMs_ = 50.0f;
+    float limiterReleaseMs_ = 0.5f;
     float stereoWidth_ = 1.0f;
     bool weaponOnlyMode_ = false;
     float sustainedWeaponState_ = 0.0f;
