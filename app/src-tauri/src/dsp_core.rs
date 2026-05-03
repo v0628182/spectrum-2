@@ -95,7 +95,7 @@ impl Default for EngineParams {
             footstep_leveler_speed_ms: 80.0,
             stability_amount: 0.0,
             spectral_floor_db: -42.0,
-            stable_release_ms: 220.0,
+            stable_release_ms: 0.5,
             footstep_guard_amount: 70.0,
             max_cut_step_db: 48.0,
             transient_kill: 70.0,

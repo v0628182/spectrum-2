@@ -104,6 +104,7 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float confirmedFootstep = ramp(scores.footstep, 0.45f, 0.72f);
     const float transientAmount = clamp(params.transientKill / 100.0f, 0.0f, 1.0f);
     const float maskAmount = params.spectralMaskEnabled ? 1.0f : 0.0f;
+    const float weaponOnlyImpact = ramp(scores.impact, 0.10f, 0.42f);
     const float rawImpactBlock = ramp(scores.impact, 0.22f, 0.70f) * transientAmount;
     const float impactBlock = rawImpactBlock * (1.0f - lerp(0.90f, 0.98f, guardAmount) * confirmedFootstep);
     const float footstepProtect = ramp(scores.footstep, 0.38f, 0.68f);
@@ -115,9 +116,11 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float sustainedReleaseMs = weaponOnlyMode ? clamp(params.sustainedHoldMs, 0.5f, 120.0f) : params.sustainedHoldMs;
     sustainedWeaponState_ = approachDb(sustainedWeaponState_, sustainedEnergy, 0.25f, sustainedReleaseMs);
 
-    const float instantWeaponDuck = std::max(
-        std::max(ramp(protectionForCuts, 0.32f, 0.78f), rawImpactBlock),
-        ramp(scores.action, 0.55f, 0.86f));
+    const float instantWeaponDuck = weaponOnlyMode
+        ? weaponOnlyImpact
+        : std::max(
+              std::max(ramp(protectionForCuts, 0.32f, 0.78f), rawImpactBlock),
+              ramp(scores.action, 0.55f, 0.86f));
     const float weaponDuck =
         weaponOnlyMode ? instantWeaponDuck : std::max(ramp(protectionForCuts, 0.32f, 0.78f), sustainedWeaponState_ * 0.85f);
     const float footstepWeaponOverlap =
@@ -187,8 +190,7 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     }
 
     if (weaponOnlyMode) {
-        const float weaponOnlyStrength =
-            clamp(std::max(std::max(weaponDuck, rawImpactBlock), ramp(scores.action, 0.50f, 0.82f)), 0.0f, 1.0f);
+        const float weaponOnlyStrength = weaponOnlyImpact;
         const float weaponDepthDb = -std::min(params.masterDuckDb, 0.0f);
         const float impactDepthDb = -std::min(params.impactDuckDb, 0.0f) * rawImpactBlock;
         targetLowShelf = 0.0f;

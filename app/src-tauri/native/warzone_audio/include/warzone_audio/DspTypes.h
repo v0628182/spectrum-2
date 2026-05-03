@@ -29,7 +29,7 @@ struct EngineParams {
     float footstepLevelerSpeedMs = 80.0f;
     float stabilityAmount = 0.0f;
     float spectralFloorDb = -42.0f;
-    float stableReleaseMs = 220.0f;
+    float stableReleaseMs = 0.5f;
     float footstepGuardAmount = 70.0f;
     float maxCutStepDb = 48.0f;
     float transientKill = 70.0f;

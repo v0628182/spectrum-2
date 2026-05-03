@@ -14,6 +14,7 @@ Proyecto VanySound/Spectrum con:
 - Los controles `masterDuckDb` e `impactDuckDb` se usan como profundidad selectiva de arma/impacto, no como mute global del output.
 - `weaponOnlyMode` evita la cadena completa de EQ y procesa solo notches dinamicos sobre el canal mid.
 - Timings full rapido: hold, attack, release, boost y limiter admiten 0.5 ms desde UI y motor.
+- Solo Arma perfeccionado: deteccion por impacto instantaneo, stability baja y max cambio alto para volver rapido a audio nativo.
 - Controles DSP extra activos: output trim, residual reduction, balance low/mid/high, STFT cutoff/preserve, transient kill, spectral mask y protection pasos.
 - Paquete instalador actualizado en `release/VanySound_Setup_TRANSFER_1.0.12.zip`.
 

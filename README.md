@@ -22,6 +22,7 @@ La app incluye:
 - Controles avanzados: nivel de cambio, sutileza, wet/dry, frecuencias, Q por banda, ataques/releases, limiter release y stereo width.
 - Reduccion de disparos por bandas de arma, con modo mid/side que evita procesar toda la mezcla.
 - Timings full rapido de hasta `0.5 ms` para hold, attack, release, boost y limiter.
+- Preset Solo Arma ajustado para deteccion por impacto instantaneo y recuperacion rapida al audio nativo.
 - Ruta de baja latencia con paquetes de 128 frames y render WASAPI de periodo minimo cuando el driver lo permite.
 
 El empaquetado puede fallar al final si no existe `TAURI_SIGNING_PRIVATE_KEY`; el EXE/MSI/setup se generan antes del paso de firma.
