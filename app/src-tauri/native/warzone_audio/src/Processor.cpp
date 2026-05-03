@@ -31,6 +31,7 @@ void Processor::reset()
     for (auto& channel : channels_) {
         channel.lowShelf.reset();
         channel.lowMid.reset();
+        channel.weaponBody.reset();
         channel.weaponMid.reset();
         channel.stepBody.reset();
         channel.step.reset();
@@ -38,6 +39,7 @@ void Processor::reset()
     }
     lowShelfDb_ = 0.0f;
     lowMidDb_ = 0.0f;
+    weaponBodyDb_ = 0.0f;
     weaponMidDb_ = 0.0f;
     stepBodyDb_ = 0.0f;
     stepDb_ = 0.0f;
@@ -48,6 +50,8 @@ void Processor::reset()
     lowShelfFreqHz_ = 250.0f;
     lowMidFreqHz_ = 650.0f;
     lowMidQ_ = 0.90f;
+    weaponBodyFreqHz_ = 900.0f;
+    weaponBodyQ_ = 1.20f;
     weaponMidFreqHz_ = 1600.0f;
     weaponMidQ_ = 0.85f;
     stepBodyFreqHz_ = 1550.0f;
@@ -60,6 +64,8 @@ void Processor::reset()
     limiterReleaseMs_ = 0.5f;
     stereoWidth_ = 1.0f;
     weaponOnlyMode_ = false;
+    transientGate_ = 0.0f;
+    transientState_ = 0.0f;
     sustainedWeaponState_ = 0.0f;
     footstepLevelerDb_ = 0.0f;
     rmsState_ = 0.0f;
@@ -134,11 +140,13 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float residualCut = clamp(params.residualReductionDb, -24.0f, 0.0f) * maskAmount;
     float targetLowShelf = constants::kBassReductionDbMax * explosionAmount * protectionForCuts;
     float targetLowMid = constants::kLowMidReductionDbMax * gunAmount * protectionForCuts;
+    float targetWeaponBody = 0.0f;
     float targetWeaponMid = params.weaponMidCutDb * gunAmount * extremeScale * weaponDuck;
     float targetStepBody = params.stepBodyBoostDb * footstepAmount * scores.footstep;
     float targetStep = (params.stepClarityBoostDb + params.stftPreserveDb) * footstepAmount * scores.footstep;
     float targetAir = constants::kActionBoostDbMax * actionAmount * std::max(scores.action, scores.footstep * 0.5f);
     float targetMasterDuck = 0.0f;
+    float targetTransientGate = 0.0f;
     maskCutoffHz_ = clamp(params.stftCutoffHz, 500.0f, 8000.0f);
 
     const float footstepBodyPreserve = footstepAmount * scores.footstep * (1.0f - weaponDuck * lerp(0.35f, 0.12f, guardAmount));
@@ -190,34 +198,60 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     }
 
     if (weaponOnlyMode) {
-        const float weaponOnlyStrength = weaponOnlyImpact;
+        const float gunEvidence = std::max({weaponOnlyImpact, ramp(protectionForCuts, 0.14f, 0.52f), actionAsWeapon});
+        const float footstepShield = clamp(guardAmount * footstepPresence, 0.0f, 1.0f);
+        const float bodyStrength =
+            std::max(gunEvidence * 0.28f,
+                     std::max(sustainedWeaponState_, ramp(protectionForCuts, 0.16f, 0.54f)) *
+                         (1.0f - 0.72f * footstepShield));
+        const float crackStrength =
+            std::max(gunEvidence * 0.36f, std::max(weaponOnlyImpact, actionAsWeapon * 0.85f) *
+                                             (1.0f - 0.55f * footstepShield));
+        const float airStrength =
+            std::max(gunEvidence * 0.32f, std::max(weaponOnlyImpact * 0.90f, actionAsWeapon) *
+                                             (1.0f - 0.35f * footstepShield));
+        const float transientStrength =
+            std::max(weaponOnlyImpact, ramp(scores.impact + scores.protection * 0.35f, 0.16f, 0.58f)) *
+            (0.55f + 0.45f * transientAmount);
         const float weaponDepthDb = -std::min(params.masterDuckDb, 0.0f);
-        const float impactDepthDb = -std::min(params.impactDuckDb, 0.0f) * rawImpactBlock;
+        const float impactDepthDb = -std::min(params.impactDuckDb, 0.0f);
+        const float midCutDb = params.weaponMidCutDb * gunAmount * extremeScale;
+        const float airCutDb = params.weaponAirCutDb * gunAmount * extremeScale;
         targetLowShelf = 0.0f;
         targetLowMid = 0.0f;
         targetStepBody = 0.0f;
         targetStep = 0.0f;
         targetMasterDuck = 0.0f;
+        targetWeaponBody = (midCutDb * 0.52f - weaponDepthDb * 0.30f + residualCut * 0.30f) * bodyStrength;
         targetWeaponMid =
-            (params.weaponMidCutDb * gunAmount * extremeScale - weaponDepthDb * 0.90f + residualCut) * weaponOnlyStrength;
-        targetAir =
-            (params.weaponAirCutDb * gunAmount * extremeScale - impactDepthDb * 0.45f + residualCut * 0.45f) *
-            weaponOnlyStrength;
+            (midCutDb * 1.15f - impactDepthDb * 0.25f + residualCut) * clamp(crackStrength, 0.0f, 1.0f);
+        targetAir = (airCutDb * 1.10f - impactDepthDb * 0.35f + residualCut * 0.45f) *
+                    clamp(airStrength, 0.0f, 1.0f);
+        targetTransientGate = clamp(transientStrength * gunAmount * extremeScale, 0.0f, 1.0f);
     }
 
     targetLowShelf = clampCutFloor(targetLowShelf, floorDb);
     targetLowMid = clampCutFloor(targetLowMid, floorDb);
+    targetWeaponBody = clampCutFloor(targetWeaponBody, floorDb);
     targetWeaponMid = clampCutFloor(targetWeaponMid, floorDb);
     targetAir = clampCutFloor(targetAir, floorDb);
     targetMasterDuck = clampCutFloor(targetMasterDuck, floorDb);
 
     targetLowShelf = scaleBySign(targetLowShelf, cutScale, boostScale);
     targetLowMid = scaleBySign(targetLowMid, cutScale, boostScale);
+    targetWeaponBody = scaleBySign(targetWeaponBody, cutScale, boostScale);
     targetWeaponMid = scaleBySign(targetWeaponMid, cutScale, boostScale);
     targetStepBody = scaleBySign(targetStepBody, cutScale, boostScale);
     targetStep = scaleBySign(targetStep, cutScale, boostScale);
     targetAir = scaleBySign(targetAir, cutScale, boostScale);
     targetMasterDuck = scaleBySign(targetMasterDuck, cutScale, boostScale);
+
+    if (weaponOnlyMode) {
+        targetWeaponBody = clampCutFloor(targetWeaponBody, floorDb);
+        targetWeaponMid = clampCutFloor(targetWeaponMid, floorDb);
+        targetAir = clampCutFloor(targetAir, floorDb);
+        targetMasterDuck = 0.0f;
+    }
 
     if (!weaponOnlyMode && footstepWeaponOverlap > 0.0f) {
         const float lowFloor = lerp(floorDb, -1.0f, footstepWeaponOverlap);
@@ -246,6 +280,8 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     lowMidFreqHz_ = clamp(params.lowMidFreqHz, 250.0f, 1200.0f);
     lowMidQ_ = clamp(params.lowMidQ, 0.25f, 3.0f);
     const float weaponOnlyFilterAmount = weaponOnlyMode ? 1.0f : footstepWeaponOverlap;
+    weaponBodyFreqHz_ = lerp(lowMidFreqHz_, std::max(lowMidFreqHz_, 900.0f), weaponOnlyFilterAmount);
+    weaponBodyQ_ = lerp(lowMidQ_, std::max(lowMidQ_, 1.20f), weaponOnlyFilterAmount);
     const float baseWeaponMidFreqHz = clamp(params.weaponMidFreqHz, 700.0f, 3600.0f);
     const float baseWeaponMidQ = clamp(params.weaponMidQ, 0.25f, 4.0f);
     weaponMidFreqHz_ = lerp(baseWeaponMidFreqHz, std::max(baseWeaponMidFreqHz, 2400.0f), weaponOnlyFilterAmount);
@@ -265,6 +301,9 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     lowMidDb_ = slewControl(
         lowMidDb_, approachDb(lowMidDb_, targetLowMid, protectionAttackMs, protectionReleaseMs),
         maxCutStepDb, maxRecoverStepDb);
+    weaponBodyDb_ = slewControl(
+        weaponBodyDb_, approachDb(weaponBodyDb_, targetWeaponBody, protectionAttackMs, protectionReleaseMs),
+        maxCutStepDb, maxRecoverStepDb);
     weaponMidDb_ = slewControl(
         weaponMidDb_, approachDb(weaponMidDb_, targetWeaponMid, protectionAttackMs, protectionReleaseMs),
         maxCutStepDb, maxRecoverStepDb);
@@ -276,6 +315,11 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     masterDuckDb_ = slewControl(
         masterDuckDb_, approachDb(masterDuckDb_, targetMasterDuck, lerp(0.5f, 4.0f, stability), lerp(70.0f, 170.0f, stability)),
         maxCutStepDb, maxRecoverStepDb);
+    transientGate_ = approachDb(
+        transientGate_,
+        weaponOnlyMode ? targetTransientGate : 0.0f,
+        0.1f,
+        weaponOnlyMode ? clamp(params.protectionReleaseMs, 0.5f, 45.0f) : 18.0f);
 
     const float levelerAmount = clamp(params.footstepLevelerAmount / 100.0f, 0.0f, 1.0f);
     const float levelerAllowed =
@@ -302,6 +346,7 @@ void Processor::updateFilters()
     for (auto& channel : channels_) {
         channel.lowShelf.setLowShelf(constants::kSampleRate, lowShelfFreqHz_, 0.707f, lowShelfDb_);
         channel.lowMid.setPeaking(constants::kSampleRate, lowMidFreqHz_, lowMidQ_, lowMidDb_);
+        channel.weaponBody.setPeaking(constants::kSampleRate, weaponBodyFreqHz_, weaponBodyQ_, weaponBodyDb_);
         channel.weaponMid.setPeaking(
             constants::kSampleRate,
             std::max(weaponMidFreqHz_, maskCutoffHz_ * 0.64f),
@@ -338,7 +383,13 @@ void Processor::processSample(float inL, float inR, float& outL, float& outR, fl
 
     if (weaponOnlyMode_) {
         const float sideIn = 0.5f * (inL - inR);
-        float weaponMid = channels_[0].weaponMid.process(midIn);
+        const float transientAlpha = 0.86f;
+        transientState_ = transientAlpha * transientState_ + (1.0f - transientAlpha) * midIn;
+        const float transientOnly = midIn - transientState_;
+        const float transientGain = lerp(1.0f, dbToAmp(-18.0f), transientGate_);
+        const float transientShaped = transientState_ + transientOnly * transientGain;
+        float weaponMid = channels_[0].weaponBody.process(transientShaped);
+        weaponMid = channels_[0].weaponMid.process(weaponMid);
         weaponMid = channels_[0].air.process(weaponMid);
         const float mixedMid = midIn + (weaponMid - midIn) * wetMix_;
         outL = clamp(mixedMid + sideIn, -ceilingAmp_, ceilingAmp_);
