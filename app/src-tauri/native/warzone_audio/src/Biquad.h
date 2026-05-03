@@ -7,6 +7,7 @@ public:
     void reset();
     void setPeaking(float sampleRate, float frequencyHz, float q, float gainDb);
     void setLowShelf(float sampleRate, float frequencyHz, float q, float gainDb);
+    void setBandPass(float sampleRate, float frequencyHz, float q);
     float process(float x);
 
 private:

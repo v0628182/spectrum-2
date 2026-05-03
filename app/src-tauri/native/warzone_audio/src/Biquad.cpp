@@ -55,6 +55,21 @@ void Biquad::setLowShelf(float sampleRate, float frequencyHz, float q, float gai
         (a + 1.0f) + (a - 1.0f) * cosW0 - beta * sinW0);
 }
 
+void Biquad::setBandPass(float sampleRate, float frequencyHz, float q)
+{
+    const float w0 = 2.0f * constants::kPi * frequencyHz / sampleRate;
+    const float alpha = std::sin(w0) / (2.0f * q);
+    const float cosW0 = std::cos(w0);
+
+    setNormalized(
+        alpha,
+        0.0f,
+        -alpha,
+        1.0f + alpha,
+        -2.0f * cosW0,
+        1.0f - alpha);
+}
+
 float Biquad::process(float x)
 {
     const float y = b0_ * x + z1_;

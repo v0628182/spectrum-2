@@ -29,6 +29,13 @@ private:
     float slewControl(float current, float target, float maxDownDb, float maxUpDb) const;
 
     std::array<Channel, 2> channels_{};
+    Biquad maskBodyProbe_;
+    Biquad maskCrackProbe_;
+    Biquad maskAirProbe_;
+    Biquad maskStepProbe_;
+    Biquad weaponBodyMask_;
+    Biquad weaponCrackMask_;
+    Biquad weaponAirMask_;
     float lowShelfDb_ = 0.0f;
     float lowMidDb_ = 0.0f;
     float weaponBodyDb_ = 0.0f;
@@ -56,8 +63,12 @@ private:
     float limiterReleaseMs_ = 0.5f;
     float stereoWidth_ = 1.0f;
     bool weaponOnlyMode_ = false;
+    float virtualWeaponMask_ = 0.0f;
+    float virtualProtectMask_ = 0.0f;
     float transientGate_ = 0.0f;
     float transientState_ = 0.0f;
+    float probeWeaponEnv_ = 0.0f;
+    float probeStepEnv_ = 0.0f;
     float sustainedWeaponState_ = 0.0f;
     float footstepLevelerDb_ = 0.0f;
     float rmsState_ = 0.0f;

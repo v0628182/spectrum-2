@@ -24,6 +24,14 @@ float scaleBySign(float valueDb, float cutScale, float boostScale)
     return valueDb < 0.0f ? valueDb * cutScale : valueDb * boostScale;
 }
 
+float followSampleEnvelope(float current, float target, float attackMs, float releaseMs)
+{
+    const float tauMs = target > current ? attackMs : releaseMs;
+    const float tauSeconds = std::max(tauMs, 0.001f) * 0.001f;
+    const float alpha = std::exp(-1.0f / (constants::kSampleRate * tauSeconds));
+    return alpha * current + (1.0f - alpha) * target;
+}
+
 } // namespace
 
 void Processor::reset()
@@ -37,6 +45,13 @@ void Processor::reset()
         channel.step.reset();
         channel.air.reset();
     }
+    maskBodyProbe_.reset();
+    maskCrackProbe_.reset();
+    maskAirProbe_.reset();
+    maskStepProbe_.reset();
+    weaponBodyMask_.reset();
+    weaponCrackMask_.reset();
+    weaponAirMask_.reset();
     lowShelfDb_ = 0.0f;
     lowMidDb_ = 0.0f;
     weaponBodyDb_ = 0.0f;
@@ -64,8 +79,12 @@ void Processor::reset()
     limiterReleaseMs_ = 0.5f;
     stereoWidth_ = 1.0f;
     weaponOnlyMode_ = false;
+    virtualWeaponMask_ = 0.0f;
+    virtualProtectMask_ = 0.0f;
     transientGate_ = 0.0f;
     transientState_ = 0.0f;
+    probeWeaponEnv_ = 0.0f;
+    probeStepEnv_ = 0.0f;
     sustainedWeaponState_ = 0.0f;
     footstepLevelerDb_ = 0.0f;
     rmsState_ = 0.0f;
@@ -147,6 +166,8 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     float targetAir = constants::kActionBoostDbMax * actionAmount * std::max(scores.action, scores.footstep * 0.5f);
     float targetMasterDuck = 0.0f;
     float targetTransientGate = 0.0f;
+    float targetVirtualWeaponMask = 0.0f;
+    float targetVirtualProtectMask = 0.0f;
     maskCutoffHz_ = clamp(params.stftCutoffHz, 500.0f, 8000.0f);
 
     const float footstepBodyPreserve = footstepAmount * scores.footstep * (1.0f - weaponDuck * lerp(0.35f, 0.12f, guardAmount));
@@ -228,6 +249,14 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
         targetAir = (airCutDb * 1.10f - impactDepthDb * 0.35f + residualCut * 0.45f) *
                     clamp(airStrength, 0.0f, 1.0f);
         targetTransientGate = clamp(transientStrength * gunAmount * extremeScale, 0.0f, 1.0f);
+        targetVirtualWeaponMask =
+            clamp(std::max({gunEvidence, transientStrength, bodyStrength * 0.86f}) * (0.70f + 0.30f * transientAmount),
+                  0.0f,
+                  1.0f);
+        targetVirtualProtectMask =
+            clamp(std::max(footstepPresence, confirmedFootstep) * guardAmount * (1.0f - 0.30f * targetVirtualWeaponMask),
+                  0.0f,
+                  1.0f);
     }
 
     targetLowShelf = clampCutFloor(targetLowShelf, floorDb);
@@ -320,6 +349,16 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
         weaponOnlyMode ? targetTransientGate : 0.0f,
         0.1f,
         weaponOnlyMode ? clamp(params.protectionReleaseMs, 0.5f, 45.0f) : 18.0f);
+    virtualWeaponMask_ = approachDb(
+        virtualWeaponMask_,
+        weaponOnlyMode ? targetVirtualWeaponMask : 0.0f,
+        0.2f,
+        weaponOnlyMode ? clamp(params.sustainedHoldMs, 8.0f, 85.0f) : 18.0f);
+    virtualProtectMask_ = approachDb(
+        virtualProtectMask_,
+        weaponOnlyMode ? targetVirtualProtectMask : 0.0f,
+        0.35f,
+        weaponOnlyMode ? clamp(params.protectionReleaseMs * 1.5f, 4.0f, 28.0f) : 18.0f);
 
     const float levelerAmount = clamp(params.footstepLevelerAmount / 100.0f, 0.0f, 1.0f);
     const float levelerAllowed =
@@ -343,6 +382,22 @@ float Processor::slewControl(float current, float target, float maxDownDb, float
 
 void Processor::updateFilters()
 {
+    maskBodyProbe_.setBandPass(constants::kSampleRate, weaponBodyFreqHz_, std::max(weaponBodyQ_, 0.35f));
+    maskCrackProbe_.setBandPass(constants::kSampleRate, weaponMidFreqHz_, std::max(weaponMidQ_, 0.35f));
+    maskAirProbe_.setBandPass(constants::kSampleRate, weaponAirFreqHz_, std::max(weaponAirQ_, 0.35f));
+    maskStepProbe_.setBandPass(constants::kSampleRate, stepClarityFreqHz_, std::max(stepClarityQ_, 0.35f));
+    weaponBodyMask_.setPeaking(constants::kSampleRate, weaponBodyFreqHz_, weaponBodyQ_, weaponBodyDb_);
+    weaponCrackMask_.setPeaking(
+        constants::kSampleRate,
+        std::max(weaponMidFreqHz_, maskCutoffHz_ * 0.64f),
+        weaponMidQ_,
+        weaponMidDb_);
+    weaponAirMask_.setPeaking(
+        constants::kSampleRate,
+        std::max(weaponAirFreqHz_, maskCutoffHz_ * 1.55f),
+        weaponAirQ_,
+        airDb_);
+
     for (auto& channel : channels_) {
         channel.lowShelf.setLowShelf(constants::kSampleRate, lowShelfFreqHz_, 0.707f, lowShelfDb_);
         channel.lowMid.setPeaking(constants::kSampleRate, lowMidFreqHz_, lowMidQ_, lowMidDb_);
@@ -386,12 +441,36 @@ void Processor::processSample(float inL, float inR, float& outL, float& outR, fl
         const float transientAlpha = 0.86f;
         transientState_ = transientAlpha * transientState_ + (1.0f - transientAlpha) * midIn;
         const float transientOnly = midIn - transientState_;
-        const float transientGain = lerp(1.0f, dbToAmp(-18.0f), transientGate_);
+        const float bodyProbe = maskBodyProbe_.process(midIn);
+        const float crackProbe = maskCrackProbe_.process(midIn);
+        const float airProbe = maskAirProbe_.process(midIn);
+        const float stepProbe = maskStepProbe_.process(midIn);
+        const float weaponProbe =
+            0.32f * std::abs(bodyProbe) + 0.43f * std::abs(crackProbe) +
+            0.25f * std::abs(airProbe) + 0.35f * std::abs(transientOnly);
+        const float protectedProbe = 0.82f * std::abs(stepProbe) + 0.18f * std::abs(sideIn);
+        probeWeaponEnv_ = followSampleEnvelope(probeWeaponEnv_, weaponProbe, 0.12f, 20.0f);
+        probeStepEnv_ = followSampleEnvelope(probeStepEnv_, protectedProbe, 0.25f, 34.0f);
+
+        const float envContrast =
+            saturate((probeWeaponEnv_ - 0.52f * probeStepEnv_) /
+                     (probeWeaponEnv_ + probeStepEnv_ + constants::kEpsAmp));
+        const float protectContrast =
+            saturate((probeStepEnv_ - 0.28f * probeWeaponEnv_) /
+                     (probeWeaponEnv_ + probeStepEnv_ + constants::kEpsAmp));
+        const float maskA = saturate(std::max(virtualWeaponMask_, transientGate_ * 0.90f) *
+                                     (0.58f + 0.42f * envContrast));
+        const float maskB = saturate(virtualProtectMask_ * (0.72f + 0.28f * protectContrast));
+        const float weaponOnlyMix = wetMix_ * maskA * (1.0f - 0.92f * maskB);
+        const float transientGain = lerp(1.0f, dbToAmp(-20.0f), transientGate_ * (1.0f - 0.65f * maskB));
         const float transientShaped = transientState_ + transientOnly * transientGain;
-        float weaponMid = channels_[0].weaponBody.process(transientShaped);
-        weaponMid = channels_[0].weaponMid.process(weaponMid);
-        weaponMid = channels_[0].air.process(weaponMid);
-        const float mixedMid = midIn + (weaponMid - midIn) * wetMix_;
+        float weaponMid = weaponBodyMask_.process(transientShaped);
+        weaponMid = weaponCrackMask_.process(weaponMid);
+        weaponMid = weaponAirMask_.process(weaponMid);
+        const float extraCancel = 0.22f * maskA * (1.0f - maskB);
+        const float maskedMid = transientShaped + (weaponMid - transientShaped) * weaponOnlyMix;
+        const float cancelledMid = maskedMid - (transientShaped - weaponMid) * extraCancel;
+        const float mixedMid = cancelledMid + (midIn - cancelledMid) * (maskB * 0.82f);
         outL = clamp(mixedMid + sideIn, -ceilingAmp_, ceilingAmp_);
         outR = clamp(mixedMid - sideIn, -ceilingAmp_, ceilingAmp_);
         peak = std::max(peak, std::max(std::abs(outL), std::abs(outR)));
