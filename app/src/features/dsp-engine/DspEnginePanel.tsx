@@ -26,6 +26,10 @@ interface DspParam {
 }
 
 const DSP_PARAMS: DspParam[] = [
+  { key: 'changeIntensity',     label: 'Nivel de cambio',        min: 0,    max: 200,   step: 1,    default: 100,  unit: '',   section: 'macro' },
+  { key: 'subtletyAmount',      label: 'Sutileza',               min: 0,    max: 100,   step: 1,    default: 35,   unit: '',   section: 'macro' },
+  { key: 'wetMix',              label: 'Mezcla procesada',       min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'macro' },
+
   // ── PASOS ──
   { key: 'footstepEnhance',      label: 'Footstep Enhance',       min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'pasos' },
   { key: 'stepLowBodyBoostDb',   label: 'Paso: cuerpo bajo',      min: 0,    max: 14,    step: 0.5,  default: 10,   unit: '',   section: 'pasos' },
@@ -33,6 +37,11 @@ const DSP_PARAMS: DspParam[] = [
   { key: 'stepBodyBoostDb',      label: 'Paso: presencia 1.55k',  min: 0,    max: 20,    step: 0.5,  default: 14,   unit: '',   section: 'pasos' },
   { key: 'stepClarityBoostDb',   label: 'Paso: claridad 3.5k',    min: 0,    max: 24,    step: 0.5,  default: 20,   unit: '',   section: 'pasos' },
   { key: 'detectionSensitivity', label: 'Sensibilidad detector',  min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'pasos' },
+
+  { key: 'stepBodyFreqHz',       label: 'Paso cuerpo Hz',         min: 600,  max: 2600,  step: 10,   default: 1550, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepBodyQ',            label: 'Paso cuerpo Q',          min: 0.25, max: 5,     step: 0.05, default: 1.35, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepClarityFreqHz',    label: 'Paso claridad Hz',       min: 1800, max: 6200,  step: 25,   default: 3500, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepClarityQ',         label: 'Paso claridad Q',        min: 0.25, max: 6,     step: 0.05, default: 1.85, unit: '',   section: 'pasos_tuning' },
 
   // ── DISPAROS / AIRSTRIKES ──
   { key: 'gunshotReduction',     label: 'Reducción disparos',     min: 0,    max: 100,   step: 1,    default: 85,   unit: '',   section: 'disparos' },
@@ -43,6 +52,14 @@ const DSP_PARAMS: DspParam[] = [
   { key: 'masterDuckDb',         label: 'Duck maestro arma',      min: -30,  max: 0,     step: 0.5,  default: 0,    unit: '',   section: 'disparos' },
   { key: 'impactDuckDb',         label: 'Duck impactos',          min: -40,  max: 0,     step: 0.5,  default: -16,  unit: '',   section: 'disparos' },
 
+  { key: 'lowShelfFreqHz',       label: 'Bajos shelf Hz',         min: 80,   max: 500,   step: 5,    default: 250,  unit: '',   section: 'band_target' },
+  { key: 'lowMidFreqHz',         label: 'Low-mid Hz',             min: 250,  max: 1200,  step: 10,   default: 650,  unit: '',   section: 'band_target' },
+  { key: 'lowMidQ',              label: 'Low-mid Q',              min: 0.25, max: 3,     step: 0.05, default: 0.9,  unit: '',   section: 'band_target' },
+  { key: 'weaponMidFreqHz',      label: 'Arma medios Hz',         min: 700,  max: 3600,  step: 25,   default: 1600, unit: '',   section: 'band_target' },
+  { key: 'weaponMidQ',           label: 'Arma medios Q',          min: 0.25, max: 4,     step: 0.05, default: 0.85, unit: '',   section: 'band_target' },
+  { key: 'weaponAirFreqHz',      label: 'Arma agudos Hz',         min: 3000, max: 12000, step: 50,   default: 6500, unit: '',   section: 'band_target' },
+  { key: 'weaponAirQ',           label: 'Arma agudos Q',          min: 0.25, max: 5,     step: 0.05, default: 1,    unit: '',   section: 'band_target' },
+
   // ── STFT GUNSHOT KILLER ──
   { key: 'spectralFloorDb',      label: 'Mascara baja dB',        min: -48,  max: -18,   step: 1,    default: -36,  unit: '',   section: 'stft' },
   { key: 'stftCutoffHz',         label: 'Corte mascara baja Hz',  min: 500,  max: 8000,  step: 100,  default: 2500, unit: '',   section: 'stft' },
@@ -51,6 +68,13 @@ const DSP_PARAMS: DspParam[] = [
   // ── TRANSIENT / LOOKAHEAD ──
   { key: 'transientKill',        label: 'Transient kill',         min: 0,    max: 100,   step: 1,    default: 70,   unit: '',   section: 'transient' },
   { key: 'lookaheadMs',          label: 'Lookahead ms',           min: 0,    max: 2,     step: 0.01, default: 0,    unit: '',   section: 'transient' },
+
+  { key: 'protectionAttackMs',   label: 'Corte attack ms',        min: 0.5,  max: 90,    step: 0.5,  default: 5,    unit: '',   section: 'timing' },
+  { key: 'protectionReleaseMs',  label: 'Corte release ms',       min: 25,   max: 900,   step: 5,    default: 170,  unit: '',   section: 'timing' },
+  { key: 'boostAttackMs',        label: 'Boost attack ms',        min: 0.5,  max: 90,    step: 0.5,  default: 8,    unit: '',   section: 'timing' },
+  { key: 'boostReleaseMs',       label: 'Boost release ms',       min: 20,   max: 900,   step: 5,    default: 160,  unit: '',   section: 'timing' },
+  { key: 'limiterReleaseMs',     label: 'Limiter release ms',     min: 5,    max: 250,   step: 1,    default: 50,   unit: '',   section: 'timing' },
+  { key: 'stereoWidth',          label: 'Stereo width',           min: 50,   max: 160,   step: 1,    default: 100,  unit: '',   section: 'timing' },
 
   // ── SALIDA ──
   { key: 'actionDetail',         label: 'Action Detail',          min: 0,    max: 100,   step: 1,    default: 26,   unit: '',   section: 'salida' },
@@ -79,10 +103,14 @@ const DSP_PARAMS: DspParam[] = [
 ];
 
 const SECTION_META: { id: string; title: string; side: 'left' | 'right' }[] = [
+  { id: 'macro',        title: 'CAMBIO / SUTILEZA',      side: 'left' },
   { id: 'pasos',        title: 'PASOS',                  side: 'left' },
+  { id: 'pasos_tuning', title: 'PASOS: FRECUENCIA / Q',  side: 'left' },
   { id: 'disparos',     title: 'DISPAROS / AIRSTRIKES',  side: 'left' },
-  { id: 'stft',         title: 'STFT GUNSHOT KILLER',    side: 'left' },
-  { id: 'transient',    title: 'TRANSIENT / LOOKAHEAD',  side: 'left' },
+  { id: 'band_target',  title: 'ARMAS / BANDA EXACTA',   side: 'left' },
+  { id: 'stft',         title: 'STFT GUNSHOT KILLER',    side: 'right' },
+  { id: 'transient',    title: 'TRANSIENT / LOOKAHEAD',  side: 'right' },
+  { id: 'timing',       title: 'TIMING / FEEL',          side: 'right' },
   { id: 'salida',       title: 'SALIDA',                 side: 'right' },
   { id: 'eq_balance',   title: 'EQ / BALANCE FINAL',     side: 'right' },
   { id: 'leveling',     title: 'LEVELING',               side: 'right' },

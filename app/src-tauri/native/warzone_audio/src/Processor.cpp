@@ -19,6 +19,11 @@ float clampCutFloor(float valueDb, float floorDb)
     return valueDb < 0.0f ? std::max(valueDb, floorDb) : valueDb;
 }
 
+float scaleBySign(float valueDb, float cutScale, float boostScale)
+{
+    return valueDb < 0.0f ? valueDb * cutScale : valueDb * boostScale;
+}
+
 } // namespace
 
 void Processor::reset()
@@ -40,6 +45,20 @@ void Processor::reset()
     masterDuckDb_ = 0.0f;
     outputTrimDb_ = 0.0f;
     maskCutoffHz_ = 2500.0f;
+    lowShelfFreqHz_ = 250.0f;
+    lowMidFreqHz_ = 650.0f;
+    lowMidQ_ = 0.90f;
+    weaponMidFreqHz_ = 1600.0f;
+    weaponMidQ_ = 0.85f;
+    stepBodyFreqHz_ = 1550.0f;
+    stepBodyQ_ = 1.35f;
+    stepClarityFreqHz_ = 3500.0f;
+    stepClarityQ_ = 1.85f;
+    weaponAirFreqHz_ = 6500.0f;
+    weaponAirQ_ = 1.00f;
+    wetMix_ = 1.0f;
+    limiterReleaseMs_ = 50.0f;
+    stereoWidth_ = 1.0f;
     sustainedWeaponState_ = 0.0f;
     footstepLevelerDb_ = 0.0f;
     rmsState_ = 0.0f;
@@ -54,16 +73,22 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     const float gunAmount = clamp(params.gunshotReduction / 100.0f, 0.0f, 1.0f);
     const float explosionAmount = clamp(params.explosionReduction / 100.0f, 0.0f, 1.0f);
     const float stability = clamp(params.stabilityAmount / 100.0f, 0.0f, 1.0f);
+    const float intensity = clamp(params.changeIntensity / 100.0f, 0.0f, 2.0f);
+    const float subtlety = clamp(params.subtletyAmount / 100.0f, 0.0f, 1.0f);
+    const float cutScale = intensity * lerp(1.35f, 0.42f, subtlety);
+    const float boostScale = intensity * lerp(1.20f, 0.38f, subtlety);
     const float guardAmount =
         std::max(clamp(params.footstepGuardAmount / 100.0f, 0.0f, 1.0f),
                  clamp(params.protectionPasos / 100.0f, 0.0f, 1.0f));
     const float floorDb = clamp(lerp(params.spectralFloorDb, params.spectralFloorStab, stability), -60.0f, -12.0f);
     const float lookaheadAssist = clamp(params.lookaheadMs / 2.0f, 0.0f, 1.0f);
-    const float protectionAttackMs = lerp(constants::kProtectionAttackMs, 2.0f, std::max(stability, lookaheadAssist));
+    const float baseProtectionAttackMs = lerp(params.protectionAttackMs, 0.5f, lookaheadAssist);
+    const float protectionAttackMs =
+        clamp(lerp(baseProtectionAttackMs, baseProtectionAttackMs * 1.85f, subtlety * 0.45f), 0.5f, 90.0f);
     const float protectionReleaseMs =
-        lerp(constants::kProtectionReleaseMs, std::max(150.0f, params.stableReleaseMs), stability);
-    const float boostAttackMs = lerp(constants::kBoostAttackMs, 8.0f, stability * 0.65f);
-    const float boostReleaseMs = lerp(constants::kBoostReleaseMs, 160.0f, stability);
+        clamp(lerp(params.protectionReleaseMs, std::max(150.0f, params.stableReleaseMs), stability * 0.35f), 25.0f, 900.0f);
+    const float boostAttackMs = clamp(lerp(params.boostAttackMs, params.boostAttackMs * 1.70f, subtlety * 0.35f), 0.5f, 90.0f);
+    const float boostReleaseMs = clamp(lerp(params.boostReleaseMs, 260.0f, subtlety * 0.50f), 20.0f, 900.0f);
     const float maxCutStepDb = lerp(48.0f, clamp(params.maxCutStepDb, 3.0f, 24.0f), stability);
     const float maxRecoverStepDb = lerp(48.0f, std::max(2.0f, maxCutStepDb * 0.45f), stability);
 
@@ -83,6 +108,9 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
 
     const float weaponDuck = std::max(ramp(protectionForCuts, 0.32f, 0.78f), sustainedWeaponState_ * 0.85f);
     const float extremeScale = params.protectionExtreme ? 1.0f : 0.55f;
+    wetMix_ = clamp(params.wetMix / 100.0f, 0.0f, 1.0f);
+    limiterReleaseMs_ = clamp(params.limiterReleaseMs, 5.0f, 250.0f);
+    stereoWidth_ = clamp(params.stereoWidth / 100.0f, 0.50f, 1.60f);
 
     const float residualCut = clamp(params.residualReductionDb, -24.0f, 0.0f) * maskAmount;
     float targetLowShelf = constants::kBassReductionDbMax * explosionAmount * protectionForCuts;
@@ -137,11 +165,30 @@ void Processor::updateTargets(const DetectorScores& scores, const EngineParams& 
     targetAir = clampCutFloor(targetAir, floorDb);
     targetMasterDuck = clampCutFloor(targetMasterDuck, floorDb);
 
+    targetLowShelf = scaleBySign(targetLowShelf, cutScale, boostScale);
+    targetLowMid = scaleBySign(targetLowMid, cutScale, boostScale);
+    targetWeaponMid = scaleBySign(targetWeaponMid, cutScale, boostScale);
+    targetStepBody = scaleBySign(targetStepBody, cutScale, boostScale);
+    targetStep = scaleBySign(targetStep, cutScale, boostScale);
+    targetAir = scaleBySign(targetAir, cutScale, boostScale);
+    targetMasterDuck = scaleBySign(targetMasterDuck, cutScale, boostScale);
+
     targetLowShelf += clamp(params.balanceLowDb, -12.0f, 12.0f);
     targetLowMid += clamp(params.balanceMidDb, -12.0f, 12.0f) * 0.65f;
     targetStepBody += clamp(params.balanceMidDb, -12.0f, 12.0f) * 0.35f;
     targetAir += clamp(params.balanceHighDb, -12.0f, 12.0f);
     outputTrimDb_ = clamp(params.outputTrimDb, -20.0f, 6.0f);
+    lowShelfFreqHz_ = clamp(params.lowShelfFreqHz, 80.0f, 500.0f);
+    lowMidFreqHz_ = clamp(params.lowMidFreqHz, 250.0f, 1200.0f);
+    lowMidQ_ = clamp(params.lowMidQ, 0.25f, 3.0f);
+    weaponMidFreqHz_ = clamp(params.weaponMidFreqHz, 700.0f, 3600.0f);
+    weaponMidQ_ = clamp(params.weaponMidQ, 0.25f, 4.0f);
+    stepBodyFreqHz_ = clamp(params.stepBodyFreqHz, 600.0f, 2600.0f);
+    stepBodyQ_ = clamp(params.stepBodyQ, 0.25f, 5.0f);
+    stepClarityFreqHz_ = clamp(params.stepClarityFreqHz, 1800.0f, 6200.0f);
+    stepClarityQ_ = clamp(params.stepClarityQ, 0.25f, 6.0f);
+    weaponAirFreqHz_ = clamp(params.weaponAirFreqHz, 3000.0f, 12000.0f);
+    weaponAirQ_ = clamp(params.weaponAirQ, 0.25f, 5.0f);
 
     lowShelfDb_ = slewControl(
         lowShelfDb_, approachDb(lowShelfDb_, targetLowShelf, protectionAttackMs, protectionReleaseMs),
@@ -183,12 +230,20 @@ float Processor::slewControl(float current, float target, float maxDownDb, float
 void Processor::updateFilters()
 {
     for (auto& channel : channels_) {
-        channel.lowShelf.setLowShelf(constants::kSampleRate, 250.0f, 0.707f, lowShelfDb_);
-        channel.lowMid.setPeaking(constants::kSampleRate, 650.0f, 0.90f, lowMidDb_);
-        channel.weaponMid.setPeaking(constants::kSampleRate, std::max(900.0f, maskCutoffHz_ * 0.64f), 0.85f, weaponMidDb_);
-        channel.stepBody.setPeaking(constants::kSampleRate, 1550.0f, 1.35f, stepBodyDb_);
-        channel.step.setPeaking(constants::kSampleRate, 3500.0f, 1.85f, stepDb_);
-        channel.air.setPeaking(constants::kSampleRate, std::max(3000.0f, maskCutoffHz_ * 1.55f), 1.00f, airDb_);
+        channel.lowShelf.setLowShelf(constants::kSampleRate, lowShelfFreqHz_, 0.707f, lowShelfDb_);
+        channel.lowMid.setPeaking(constants::kSampleRate, lowMidFreqHz_, lowMidQ_, lowMidDb_);
+        channel.weaponMid.setPeaking(
+            constants::kSampleRate,
+            std::max(weaponMidFreqHz_, maskCutoffHz_ * 0.64f),
+            weaponMidQ_,
+            weaponMidDb_);
+        channel.stepBody.setPeaking(constants::kSampleRate, stepBodyFreqHz_, stepBodyQ_, stepBodyDb_);
+        channel.step.setPeaking(constants::kSampleRate, stepClarityFreqHz_, stepClarityQ_, stepDb_);
+        channel.air.setPeaking(
+            constants::kSampleRate,
+            std::max(weaponAirFreqHz_, maskCutoffHz_ * 1.55f),
+            weaponAirQ_,
+            airDb_);
     }
 }
 
@@ -198,7 +253,8 @@ float Processor::limit(float x)
     if (absX > ceilingAmp_) {
         limiterGain_ = std::min(limiterGain_, ceilingAmp_ / (absX + constants::kEpsAmp));
     } else {
-        const float release = std::exp(-1.0f / (constants::kSampleRate * 0.050f));
+        const float releaseSeconds = limiterReleaseMs_ * 0.001f;
+        const float release = std::exp(-1.0f / (constants::kSampleRate * releaseSeconds));
         limiterGain_ = 1.0f - release + release * limiterGain_;
     }
     return clamp(x * limiterGain_, -ceilingAmp_, ceilingAmp_);
@@ -225,8 +281,20 @@ void Processor::processSample(float inL, float inR, float& outL, float& outR, fl
     r = channels_[1].air.process(r);
 
     const float duckGain = dbToAmp(masterDuckDb_ + footstepLevelerDb_ + outputTrimDb_);
-    outL = limit(l * duckGain);
-    outR = limit(r * duckGain);
+    const float wetL = limit(l * duckGain);
+    const float wetR = limit(r * duckGain);
+    float mixedL = inL + (wetL - inL) * wetMix_;
+    float mixedR = inR + (wetR - inR) * wetMix_;
+
+    if (std::abs(stereoWidth_ - 1.0f) > 0.001f) {
+        const float mid = 0.5f * (mixedL + mixedR);
+        const float side = 0.5f * (mixedL - mixedR) * stereoWidth_;
+        mixedL = mid + side;
+        mixedR = mid - side;
+    }
+
+    outL = clamp(mixedL, -ceilingAmp_, ceilingAmp_);
+    outR = clamp(mixedR, -ceilingAmp_, ceilingAmp_);
     peak = std::max(peak, std::max(std::abs(outL), std::abs(outR)));
 }
 

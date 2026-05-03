@@ -45,6 +45,26 @@ pub struct EngineParams {
     stft_preserve_db: f32,
     spectral_floor_stab: f32,
     protection_pasos: f32,
+    change_intensity: f32,
+    subtlety_amount: f32,
+    wet_mix: f32,
+    low_shelf_freq_hz: f32,
+    low_mid_freq_hz: f32,
+    low_mid_q: f32,
+    weapon_mid_freq_hz: f32,
+    weapon_mid_q: f32,
+    step_body_freq_hz: f32,
+    step_body_q: f32,
+    step_clarity_freq_hz: f32,
+    step_clarity_q: f32,
+    weapon_air_freq_hz: f32,
+    weapon_air_q: f32,
+    protection_attack_ms: f32,
+    protection_release_ms: f32,
+    boost_attack_ms: f32,
+    boost_release_ms: f32,
+    limiter_release_ms: f32,
+    stereo_width: f32,
     protection_extreme: i32,
     spectral_mask_enabled: i32,
     debug_logging: i32,
@@ -88,6 +108,26 @@ impl Default for EngineParams {
             stft_preserve_db: 0.0,
             spectral_floor_stab: -34.0,
             protection_pasos: 85.0,
+            change_intensity: 100.0,
+            subtlety_amount: 35.0,
+            wet_mix: 100.0,
+            low_shelf_freq_hz: 250.0,
+            low_mid_freq_hz: 650.0,
+            low_mid_q: 0.90,
+            weapon_mid_freq_hz: 1600.0,
+            weapon_mid_q: 0.85,
+            step_body_freq_hz: 1550.0,
+            step_body_q: 1.35,
+            step_clarity_freq_hz: 3500.0,
+            step_clarity_q: 1.85,
+            weapon_air_freq_hz: 6500.0,
+            weapon_air_q: 1.00,
+            protection_attack_ms: 5.0,
+            protection_release_ms: 170.0,
+            boost_attack_ms: 8.0,
+            boost_release_ms: 160.0,
+            limiter_release_ms: 50.0,
+            stereo_width: 100.0,
             protection_extreme: 1,
             spectral_mask_enabled: 1,
             debug_logging: 0,
@@ -138,6 +178,26 @@ impl EngineParams {
         out.stft_preserve_db = get(params, "stftPreserveDb", out.stft_preserve_db);
         out.spectral_floor_stab = get(params, "spectralFloorStab", out.spectral_floor_stab);
         out.protection_pasos = get(params, "protectionPasos", out.protection_pasos);
+        out.change_intensity = get(params, "changeIntensity", out.change_intensity);
+        out.subtlety_amount = get(params, "subtletyAmount", out.subtlety_amount);
+        out.wet_mix = get(params, "wetMix", out.wet_mix);
+        out.low_shelf_freq_hz = get(params, "lowShelfFreqHz", out.low_shelf_freq_hz);
+        out.low_mid_freq_hz = get(params, "lowMidFreqHz", out.low_mid_freq_hz);
+        out.low_mid_q = get(params, "lowMidQ", out.low_mid_q);
+        out.weapon_mid_freq_hz = get(params, "weaponMidFreqHz", out.weapon_mid_freq_hz);
+        out.weapon_mid_q = get(params, "weaponMidQ", out.weapon_mid_q);
+        out.step_body_freq_hz = get(params, "stepBodyFreqHz", out.step_body_freq_hz);
+        out.step_body_q = get(params, "stepBodyQ", out.step_body_q);
+        out.step_clarity_freq_hz = get(params, "stepClarityFreqHz", out.step_clarity_freq_hz);
+        out.step_clarity_q = get(params, "stepClarityQ", out.step_clarity_q);
+        out.weapon_air_freq_hz = get(params, "weaponAirFreqHz", out.weapon_air_freq_hz);
+        out.weapon_air_q = get(params, "weaponAirQ", out.weapon_air_q);
+        out.protection_attack_ms = get(params, "protectionAttackMs", out.protection_attack_ms);
+        out.protection_release_ms = get(params, "protectionReleaseMs", out.protection_release_ms);
+        out.boost_attack_ms = get(params, "boostAttackMs", out.boost_attack_ms);
+        out.boost_release_ms = get(params, "boostReleaseMs", out.boost_release_ms);
+        out.limiter_release_ms = get(params, "limiterReleaseMs", out.limiter_release_ms);
+        out.stereo_width = get(params, "stereoWidth", out.stereo_width);
         out.protection_extreme = (get(params, "protectionExtreme", 1.0) > 0.5) as i32;
         out.spectral_mask_enabled = (get(params, "spectralMaskEnabled", 1.0) > 0.5) as i32;
         out.debug_logging = (get(params, "debugLogging", 0.0) > 0.5) as i32;

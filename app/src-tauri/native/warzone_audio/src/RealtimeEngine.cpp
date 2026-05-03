@@ -57,6 +57,26 @@ RealtimeEngine::AtomicParams::AtomicParams() noexcept
       stftPreserveDb(EngineParams{}.stftPreserveDb),
       spectralFloorStab(EngineParams{}.spectralFloorStab),
       protectionPasos(EngineParams{}.protectionPasos),
+      changeIntensity(EngineParams{}.changeIntensity),
+      subtletyAmount(EngineParams{}.subtletyAmount),
+      wetMix(EngineParams{}.wetMix),
+      lowShelfFreqHz(EngineParams{}.lowShelfFreqHz),
+      lowMidFreqHz(EngineParams{}.lowMidFreqHz),
+      lowMidQ(EngineParams{}.lowMidQ),
+      weaponMidFreqHz(EngineParams{}.weaponMidFreqHz),
+      weaponMidQ(EngineParams{}.weaponMidQ),
+      stepBodyFreqHz(EngineParams{}.stepBodyFreqHz),
+      stepBodyQ(EngineParams{}.stepBodyQ),
+      stepClarityFreqHz(EngineParams{}.stepClarityFreqHz),
+      stepClarityQ(EngineParams{}.stepClarityQ),
+      weaponAirFreqHz(EngineParams{}.weaponAirFreqHz),
+      weaponAirQ(EngineParams{}.weaponAirQ),
+      protectionAttackMs(EngineParams{}.protectionAttackMs),
+      protectionReleaseMs(EngineParams{}.protectionReleaseMs),
+      boostAttackMs(EngineParams{}.boostAttackMs),
+      boostReleaseMs(EngineParams{}.boostReleaseMs),
+      limiterReleaseMs(EngineParams{}.limiterReleaseMs),
+      stereoWidth(EngineParams{}.stereoWidth),
       protectionExtreme(EngineParams{}.protectionExtreme ? 1 : 0),
       spectralMaskEnabled(EngineParams{}.spectralMaskEnabled ? 1 : 0),
       debugLogging(EngineParams{}.debugLogging ? 1 : 0)
@@ -100,6 +120,26 @@ void RealtimeEngine::AtomicParams::store(const EngineParams& params) noexcept
     stftPreserveDb.store(sanitize(params.stftPreserveDb, EngineParams{}.stftPreserveDb), std::memory_order_relaxed);
     spectralFloorStab.store(sanitize(params.spectralFloorStab, EngineParams{}.spectralFloorStab), std::memory_order_relaxed);
     protectionPasos.store(sanitize(params.protectionPasos, EngineParams{}.protectionPasos), std::memory_order_relaxed);
+    changeIntensity.store(sanitize(params.changeIntensity, EngineParams{}.changeIntensity), std::memory_order_relaxed);
+    subtletyAmount.store(sanitize(params.subtletyAmount, EngineParams{}.subtletyAmount), std::memory_order_relaxed);
+    wetMix.store(sanitize(params.wetMix, EngineParams{}.wetMix), std::memory_order_relaxed);
+    lowShelfFreqHz.store(sanitize(params.lowShelfFreqHz, EngineParams{}.lowShelfFreqHz), std::memory_order_relaxed);
+    lowMidFreqHz.store(sanitize(params.lowMidFreqHz, EngineParams{}.lowMidFreqHz), std::memory_order_relaxed);
+    lowMidQ.store(sanitize(params.lowMidQ, EngineParams{}.lowMidQ), std::memory_order_relaxed);
+    weaponMidFreqHz.store(sanitize(params.weaponMidFreqHz, EngineParams{}.weaponMidFreqHz), std::memory_order_relaxed);
+    weaponMidQ.store(sanitize(params.weaponMidQ, EngineParams{}.weaponMidQ), std::memory_order_relaxed);
+    stepBodyFreqHz.store(sanitize(params.stepBodyFreqHz, EngineParams{}.stepBodyFreqHz), std::memory_order_relaxed);
+    stepBodyQ.store(sanitize(params.stepBodyQ, EngineParams{}.stepBodyQ), std::memory_order_relaxed);
+    stepClarityFreqHz.store(sanitize(params.stepClarityFreqHz, EngineParams{}.stepClarityFreqHz), std::memory_order_relaxed);
+    stepClarityQ.store(sanitize(params.stepClarityQ, EngineParams{}.stepClarityQ), std::memory_order_relaxed);
+    weaponAirFreqHz.store(sanitize(params.weaponAirFreqHz, EngineParams{}.weaponAirFreqHz), std::memory_order_relaxed);
+    weaponAirQ.store(sanitize(params.weaponAirQ, EngineParams{}.weaponAirQ), std::memory_order_relaxed);
+    protectionAttackMs.store(sanitize(params.protectionAttackMs, EngineParams{}.protectionAttackMs), std::memory_order_relaxed);
+    protectionReleaseMs.store(sanitize(params.protectionReleaseMs, EngineParams{}.protectionReleaseMs), std::memory_order_relaxed);
+    boostAttackMs.store(sanitize(params.boostAttackMs, EngineParams{}.boostAttackMs), std::memory_order_relaxed);
+    boostReleaseMs.store(sanitize(params.boostReleaseMs, EngineParams{}.boostReleaseMs), std::memory_order_relaxed);
+    limiterReleaseMs.store(sanitize(params.limiterReleaseMs, EngineParams{}.limiterReleaseMs), std::memory_order_relaxed);
+    stereoWidth.store(sanitize(params.stereoWidth, EngineParams{}.stereoWidth), std::memory_order_relaxed);
     protectionExtreme.store(params.protectionExtreme ? 1 : 0, std::memory_order_relaxed);
     spectralMaskEnabled.store(params.spectralMaskEnabled ? 1 : 0, std::memory_order_relaxed);
     debugLogging.store(params.debugLogging ? 1 : 0, std::memory_order_relaxed);
@@ -143,6 +183,26 @@ EngineParams RealtimeEngine::AtomicParams::load() const noexcept
     params.stftPreserveDb = stftPreserveDb.load(std::memory_order_relaxed);
     params.spectralFloorStab = spectralFloorStab.load(std::memory_order_relaxed);
     params.protectionPasos = protectionPasos.load(std::memory_order_relaxed);
+    params.changeIntensity = changeIntensity.load(std::memory_order_relaxed);
+    params.subtletyAmount = subtletyAmount.load(std::memory_order_relaxed);
+    params.wetMix = wetMix.load(std::memory_order_relaxed);
+    params.lowShelfFreqHz = lowShelfFreqHz.load(std::memory_order_relaxed);
+    params.lowMidFreqHz = lowMidFreqHz.load(std::memory_order_relaxed);
+    params.lowMidQ = lowMidQ.load(std::memory_order_relaxed);
+    params.weaponMidFreqHz = weaponMidFreqHz.load(std::memory_order_relaxed);
+    params.weaponMidQ = weaponMidQ.load(std::memory_order_relaxed);
+    params.stepBodyFreqHz = stepBodyFreqHz.load(std::memory_order_relaxed);
+    params.stepBodyQ = stepBodyQ.load(std::memory_order_relaxed);
+    params.stepClarityFreqHz = stepClarityFreqHz.load(std::memory_order_relaxed);
+    params.stepClarityQ = stepClarityQ.load(std::memory_order_relaxed);
+    params.weaponAirFreqHz = weaponAirFreqHz.load(std::memory_order_relaxed);
+    params.weaponAirQ = weaponAirQ.load(std::memory_order_relaxed);
+    params.protectionAttackMs = protectionAttackMs.load(std::memory_order_relaxed);
+    params.protectionReleaseMs = protectionReleaseMs.load(std::memory_order_relaxed);
+    params.boostAttackMs = boostAttackMs.load(std::memory_order_relaxed);
+    params.boostReleaseMs = boostReleaseMs.load(std::memory_order_relaxed);
+    params.limiterReleaseMs = limiterReleaseMs.load(std::memory_order_relaxed);
+    params.stereoWidth = stereoWidth.load(std::memory_order_relaxed);
     params.protectionExtreme = protectionExtreme.load(std::memory_order_relaxed) != 0;
     params.spectralMaskEnabled = spectralMaskEnabled.load(std::memory_order_relaxed) != 0;
     params.debugLogging = debugLogging.load(std::memory_order_relaxed) != 0;

@@ -1,8 +1,37 @@
-# Warzone Audio DSP Prototype
+# Spectrum 2
 
-Motor DSP nativo para procesamiento competitivo de audio en Windows/APO.
+VanySound/Spectrum 2 para Windows: app Tauri con motor DSP nativo FirstEdition, replay WASAPI cable -> audifonos y controles avanzados de procesamiento.
 
-Esta primera base separa el motor real-time de cualquier UI. Tauri u otra app de control debe escribir parametros al puente IPC/config, pero nunca debe estar en el camino del audio.
+El procesamiento se aplica al flujo capturado del cable antes de reproducirse en los audifonos. No instala el DSP sobre la salida global de los audifonos, asi que YouTube/Discord pueden seguir sonando normal si salen directo a los audifonos.
+
+## App principal
+
+```powershell
+cd app
+npm install
+npm run build
+npm run tauri:build
+```
+
+La app incluye:
+
+- DSP Engine realtime con el core FirstEdition.
+- Spectrum Analyzer de 32 bandas leyendo el audio real del cable.
+- Preset `Mejor OPC` y presets personalizados con nombre.
+- Controles avanzados: nivel de cambio, sutileza, wet/dry, frecuencias, Q por banda, ataques/releases, limiter release y stereo width.
+- Ruta de baja latencia con paquetes de 128 frames y render WASAPI de periodo minimo cuando el driver lo permite.
+
+El empaquetado puede fallar al final si no existe `TAURI_SIGNING_PRIVATE_KEY`; el EXE/MSI/setup se generan antes del paso de firma.
+
+## Release
+
+El paquete transferible actualizado esta en:
+
+```text
+release/VanySound_Setup_TRANSFER_1.0.12.zip
+```
+
+## Core DSP legacy
 
 ## Estructura
 
