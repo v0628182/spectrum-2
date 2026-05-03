@@ -181,24 +181,8 @@ function makeCustomPresetId(name: string) {
 
 const PRESETS: Preset[] = [
   {
-    id: 'mejoropc',
-    label: 'Mejor OPC',
-    values: {
-      footstepEnhance: 100, actionDetail: 26, gunshotReduction: 85, explosionReduction: 90,
-      detectionSensitivity: 100, outputCeilingDb: -0.5, stepBodyBoostDb: 14, stepClarityBoostDb: 20,
-      stepLowBodyBoostDb: 10, stepLowMidBoostDb: 9, weaponMidCutDb: -22, weaponAirCutDb: -20,
-      sustainedHoldMs: 650, masterDuckDb: 0, impactDuckDb: -16, footstepLevelerAmount: 100,
-      footstepTargetRmsDb: -14, footstepMaxLiftDb: 12, footstepLevelerSpeedMs: 10,
-      stabilityAmount: 100, spectralFloorDb: -36, stftCutoffHz: 2500, stftPreserveDb: 0,
-      transientKill: 70, spectralFloorStab: -34, stableReleaseMs: 260, footstepGuardAmount: 85,
-      protectionPasos: 85, maxCutStepDb: 8, outputTrimDb: -7.5, residualReductionDb: 0,
-      balanceLowDb: 0, balanceMidDb: 0, balanceHighDb: 0,
-    },
-    flags: { protectionExtreme: true, spectralMaskEnabled: true, debugLogging: true },
-  },
-  {
-    id: 'arma_selectiva_pasos_vivos',
-    label: 'Solo Arma - Resto Nativo',
+    id: 'perfecta_solo_arma_05ms',
+    label: 'PERFECTA - Solo Arma 0.5ms',
     values: {
       weaponOnlyMode: 1, changeIntensity: 145, subtletyAmount: 35, wetMix: 96,
       footstepEnhance: 0, actionDetail: 0, gunshotReduction: 100, explosionReduction: 0,
@@ -218,6 +202,22 @@ const PRESETS: Preset[] = [
       protectionAttackMs: 0.5, protectionReleaseMs: 0.5,
       boostAttackMs: 0.5, boostReleaseMs: 0.5,
       limiterReleaseMs: 0.5, stereoWidth: 100,
+    },
+    flags: { protectionExtreme: true, spectralMaskEnabled: true, debugLogging: true },
+  },
+  {
+    id: 'mejoropc',
+    label: 'Mejor OPC',
+    values: {
+      footstepEnhance: 100, actionDetail: 26, gunshotReduction: 85, explosionReduction: 90,
+      detectionSensitivity: 100, outputCeilingDb: -0.5, stepBodyBoostDb: 14, stepClarityBoostDb: 20,
+      stepLowBodyBoostDb: 10, stepLowMidBoostDb: 9, weaponMidCutDb: -22, weaponAirCutDb: -20,
+      sustainedHoldMs: 650, masterDuckDb: 0, impactDuckDb: -16, footstepLevelerAmount: 100,
+      footstepTargetRmsDb: -14, footstepMaxLiftDb: 12, footstepLevelerSpeedMs: 10,
+      stabilityAmount: 100, spectralFloorDb: -36, stftCutoffHz: 2500, stftPreserveDb: 0,
+      transientKill: 70, spectralFloorStab: -34, stableReleaseMs: 260, footstepGuardAmount: 85,
+      protectionPasos: 85, maxCutStepDb: 8, outputTrimDb: -7.5, residualReductionDb: 0,
+      balanceLowDb: 0, balanceMidDb: 0, balanceHighDb: 0,
     },
     flags: { protectionExtreme: true, spectralMaskEnabled: true, debugLogging: true },
   },
