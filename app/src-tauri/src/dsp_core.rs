@@ -66,6 +66,14 @@ pub struct EngineParams {
     boost_release_ms: f32,
     limiter_release_ms: f32,
     stereo_width: f32,
+    weapon_mute_amount: f32,
+    weapon_silencer_amount: f32,
+    silencer_body_amount: f32,
+    silencer_crack_amount: f32,
+    silencer_air_amount: f32,
+    silencer_tail_amount: f32,
+    silencer_side_amount: f32,
+    silencer_restore_amount: f32,
     protection_extreme: i32,
     spectral_mask_enabled: i32,
     debug_logging: i32,
@@ -130,6 +138,14 @@ impl Default for EngineParams {
             boost_release_ms: 0.5,
             limiter_release_ms: 0.5,
             stereo_width: 100.0,
+            weapon_mute_amount: 0.0,
+            weapon_silencer_amount: 0.0,
+            silencer_body_amount: 0.0,
+            silencer_crack_amount: 0.0,
+            silencer_air_amount: 0.0,
+            silencer_tail_amount: 0.0,
+            silencer_side_amount: 0.0,
+            silencer_restore_amount: 100.0,
             protection_extreme: 1,
             spectral_mask_enabled: 1,
             debug_logging: 0,
@@ -201,6 +217,20 @@ impl EngineParams {
         out.boost_release_ms = get(params, "boostReleaseMs", out.boost_release_ms);
         out.limiter_release_ms = get(params, "limiterReleaseMs", out.limiter_release_ms);
         out.stereo_width = get(params, "stereoWidth", out.stereo_width);
+        out.weapon_mute_amount = get(params, "weaponMuteAmount", out.weapon_mute_amount);
+        out.weapon_silencer_amount =
+            get(params, "weaponSilencerAmount", out.weapon_silencer_amount);
+        out.silencer_body_amount =
+            get(params, "silencerBodyAmount", out.silencer_body_amount);
+        out.silencer_crack_amount =
+            get(params, "silencerCrackAmount", out.silencer_crack_amount);
+        out.silencer_air_amount = get(params, "silencerAirAmount", out.silencer_air_amount);
+        out.silencer_tail_amount =
+            get(params, "silencerTailAmount", out.silencer_tail_amount);
+        out.silencer_side_amount =
+            get(params, "silencerSideAmount", out.silencer_side_amount);
+        out.silencer_restore_amount =
+            get(params, "silencerRestoreAmount", out.silencer_restore_amount);
         out.protection_extreme = (get(params, "protectionExtreme", 1.0) > 0.5) as i32;
         out.spectral_mask_enabled = (get(params, "spectralMaskEnabled", 1.0) > 0.5) as i32;
         out.debug_logging = (get(params, "debugLogging", 0.0) > 0.5) as i32;
@@ -256,7 +286,7 @@ impl NativeDspEngine {
         }
     }
 
-    fn process_interleaved_in_place(&self, samples: &mut [f32], channels: u16) {
+    fn process_interleaved_in_place(&self, samples: &mut [f32], channels: u16, channel_mask: u32) {
         if !self.enabled.load(Ordering::Acquire) || channels == 0 {
             return;
         }
@@ -274,6 +304,7 @@ impl NativeDspEngine {
                 samples.as_mut_ptr(),
                 frames,
                 channels,
+                channel_mask,
             );
         }
     }
@@ -320,9 +351,9 @@ pub fn set_enabled(enabled: bool) {
     }
 }
 
-pub fn process_interleaved_in_place(samples: &mut [f32], channels: u16) {
+pub fn process_interleaved_in_place(samples: &mut [f32], channels: u16, channel_mask: u32) {
     if let Some(engine) = ENGINE.get() {
-        engine.process_interleaved_in_place(samples, channels);
+        engine.process_interleaved_in_place(samples, channels, channel_mask);
     }
 }
 
@@ -359,6 +390,7 @@ unsafe extern "C" {
         output: *mut f32,
         frames: usize,
         channels: usize,
+        channel_mask: u32,
     );
     fn wza_rt_get_scores(engine: *mut c_void, scores: *mut Scores);
 }

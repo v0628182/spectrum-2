@@ -2,10 +2,10 @@
 
 #include <atomic>
 #include <cstddef>
-#include <vector>
+#include <cstdint>
 
-#include "warzone_audio/DspEngine.h"
 #include "warzone_audio/DspTypes.h"
+#include "warzone_audio/SpatialDspEngine.h"
 
 namespace warzone_audio {
 
@@ -44,7 +44,8 @@ public:
     void processInterleaved(const float* input,
                             float* output,
                             std::size_t frames,
-                            std::size_t channels) noexcept;
+                            std::size_t channels,
+                            std::uint32_t channelMask = 0) noexcept;
 
     RealtimeSnapshot snapshot() const noexcept;
 
@@ -106,6 +107,14 @@ private:
         std::atomic<float> boostReleaseMs;
         std::atomic<float> limiterReleaseMs;
         std::atomic<float> stereoWidth;
+        std::atomic<float> weaponMuteAmount;
+        std::atomic<float> weaponSilencerAmount;
+        std::atomic<float> silencerBodyAmount;
+        std::atomic<float> silencerCrackAmount;
+        std::atomic<float> silencerAirAmount;
+        std::atomic<float> silencerTailAmount;
+        std::atomic<float> silencerSideAmount;
+        std::atomic<float> silencerRestoreAmount;
         std::atomic<int> protectionExtreme;
         std::atomic<int> spectralMaskEnabled;
         std::atomic<int> debugLogging;
@@ -119,11 +128,7 @@ private:
     void publishSnapshot() noexcept;
     void passthrough(const float* input, float* output, std::size_t frames, std::size_t channels) noexcept;
 
-    DspEngine engine_;
-    std::vector<float> left_;
-    std::vector<float> right_;
-    std::vector<float> outLeft_;
-    std::vector<float> outRight_;
+    SpatialDspEngine engine_;
     std::size_t maxFramesPrepared_ = 0;
     std::size_t maxChannelsPrepared_ = 0;
 

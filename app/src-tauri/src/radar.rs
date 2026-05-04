@@ -817,7 +817,7 @@ unsafe fn run_raw_capture(
             // Send to analysis (non-blocking, OK to drop if behind)
             let _ = analysis_tx.try_send((samples.clone(), channels, channel_mask));
             let mut render_samples = samples;
-            crate::dsp_core::process_interleaved_in_place(&mut render_samples, channels);
+            crate::dsp_core::process_interleaved_in_place(&mut render_samples, channels, channel_mask);
 
             // Send to render (non-blocking, OK to drop if behind)
             if render_tx

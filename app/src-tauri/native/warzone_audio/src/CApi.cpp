@@ -75,6 +75,14 @@ warzone_audio::EngineParams toCppParams(const WzaEngineParams& params)
     out.boostReleaseMs = params.boostReleaseMs;
     out.limiterReleaseMs = params.limiterReleaseMs;
     out.stereoWidth = params.stereoWidth;
+    out.weaponMuteAmount = params.weaponMuteAmount;
+    out.weaponSilencerAmount = params.weaponSilencerAmount;
+    out.silencerBodyAmount = params.silencerBodyAmount;
+    out.silencerCrackAmount = params.silencerCrackAmount;
+    out.silencerAirAmount = params.silencerAirAmount;
+    out.silencerTailAmount = params.silencerTailAmount;
+    out.silencerSideAmount = params.silencerSideAmount;
+    out.silencerRestoreAmount = params.silencerRestoreAmount;
     out.protectionExtreme = params.protectionExtreme != 0;
     out.spectralMaskEnabled = params.spectralMaskEnabled != 0;
     out.debugLogging = params.debugLogging != 0;

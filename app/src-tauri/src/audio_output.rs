@@ -21,6 +21,18 @@ const WAVE_FORMAT_PCM: u16 = 0x0001;
 const WAVE_FORMAT_IEEE_FLOAT: u16 = 0x0003;
 const WAVE_FORMAT_EXTENSIBLE: u16 = 0xFFFE;
 
+const SPEAKER_FRONT_LEFT: u32 = 0x1;
+const SPEAKER_FRONT_RIGHT: u32 = 0x2;
+const SPEAKER_FRONT_CENTER: u32 = 0x4;
+const SPEAKER_LOW_FREQUENCY: u32 = 0x8;
+const SPEAKER_BACK_LEFT: u32 = 0x10;
+const SPEAKER_BACK_RIGHT: u32 = 0x20;
+const SPEAKER_FRONT_LEFT_OF_CENTER: u32 = 0x40;
+const SPEAKER_FRONT_RIGHT_OF_CENTER: u32 = 0x80;
+const SPEAKER_BACK_CENTER: u32 = 0x100;
+const SPEAKER_SIDE_LEFT: u32 = 0x200;
+const SPEAKER_SIDE_RIGHT: u32 = 0x400;
+
 #[derive(Debug, Clone, Copy)]
 enum OutputSampleFormat {
     Float32,
@@ -182,14 +194,16 @@ fn render_session(
         let out_blockalign = mix_fmt.nBlockAlign;
         let out_sample_rate = mix_fmt.nSamplesPerSec;
         let output_format = detect_output_sample_format(mix_fmt_ptr)?;
+        let out_channel_mask = channel_mask_from_format(mix_fmt_ptr, out_channels);
 
         tracing::info!(
-            "audio-render format: {}ch, {}bit, rate={}, ba={}, sample={:?}",
+            "audio-render format: {}ch, {}bit, rate={}, ba={}, sample={:?}, mask=0x{:X}",
             out_channels,
             out_bits,
             out_sample_rate,
             out_blockalign,
-            output_format
+            output_format,
+            out_channel_mask
         );
 
         let stream_flags =
@@ -264,6 +278,7 @@ fn render_session(
             out_bits,
             out_blockalign,
             output_format,
+            out_channel_mask,
             active,
             restart_signal,
         );
@@ -292,6 +307,7 @@ unsafe fn run_render_loop(
     _out_bits: u16,
     out_blockalign: u16,
     output_format: OutputSampleFormat,
+    out_channel_mask: u32,
     active: &AtomicBool,
     restart_signal: &AtomicBool,
 ) -> anyhow::Result<()> {
@@ -304,9 +320,10 @@ unsafe fn run_render_loop(
         }
 
         // Receive audio packets (non-blocking drain)
-        while let Ok((samples, in_channels, _mask)) = rx.try_recv() {
+        while let Ok((samples, in_channels, input_mask)) = rx.try_recv() {
             // Channel remix if needed (e.g., 8ch capture → 2ch output)
-            let remixed = remix_channels(&samples, in_channels, out_channels);
+            let remixed =
+                remix_channels(&samples, in_channels, out_channels, input_mask, out_channel_mask);
             sample_buf.extend_from_slice(&remixed);
         }
 
@@ -427,6 +444,45 @@ unsafe fn detect_output_sample_format(
     Ok(sample_format)
 }
 
+unsafe fn channel_mask_from_format(
+    mix_fmt_ptr: *const windows::Win32::Media::Audio::WAVEFORMATEX,
+    channels: u16,
+) -> u32 {
+    use windows::Win32::Media::Audio::WAVEFORMATEXTENSIBLE;
+
+    let fmt = &*mix_fmt_ptr;
+    if fmt.wFormatTag == WAVE_FORMAT_EXTENSIBLE && fmt.cbSize >= 22 {
+        let mask = (*(mix_fmt_ptr as *const WAVEFORMATEXTENSIBLE)).dwChannelMask as u32;
+        if mask != 0 {
+            return mask;
+        }
+    }
+
+    match channels {
+        1 => SPEAKER_FRONT_CENTER,
+        2 => SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT,
+        6 => {
+            SPEAKER_FRONT_LEFT
+                | SPEAKER_FRONT_RIGHT
+                | SPEAKER_FRONT_CENTER
+                | SPEAKER_LOW_FREQUENCY
+                | SPEAKER_BACK_LEFT
+                | SPEAKER_BACK_RIGHT
+        }
+        8 => {
+            SPEAKER_FRONT_LEFT
+                | SPEAKER_FRONT_RIGHT
+                | SPEAKER_FRONT_CENTER
+                | SPEAKER_LOW_FREQUENCY
+                | SPEAKER_BACK_LEFT
+                | SPEAKER_BACK_RIGHT
+                | SPEAKER_SIDE_LEFT
+                | SPEAKER_SIDE_RIGHT
+        }
+        _ => 0,
+    }
+}
+
 unsafe fn write_render_samples(
     render_buf: *mut u8,
     samples: &[f32],
@@ -503,7 +559,8 @@ fn f32_to_i32(sample: f32) -> i32 {
 
 /// Remix interleaved samples from in_channels to out_channels.
 /// Handles common cases: downmix (8→2, 6→2) and upmix (2→6, 2→8).
-fn remix_channels(samples: &[f32], in_ch: u16, out_ch: u16) -> Vec<f32> {
+#[allow(dead_code)]
+fn remix_channels_legacy(samples: &[f32], in_ch: u16, out_ch: u16) -> Vec<f32> {
     if in_ch == out_ch {
         return samples.to_vec();
     }
@@ -653,4 +710,161 @@ pub fn write_output_endpoint_guid(guid: &str) -> anyhow::Result<()> {
 
     tracing::info!(guid, "OutputEndpointGuid written and verified");
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SpeakerPosition {
+    Unknown,
+    FrontLeft,
+    FrontRight,
+    FrontCenter,
+    LowFrequency,
+    BackLeft,
+    BackRight,
+    FrontLeftOfCenter,
+    FrontRightOfCenter,
+    BackCenter,
+    SideLeft,
+    SideRight,
+}
+
+fn speaker_positions(channels: usize, mask: u32) -> Vec<SpeakerPosition> {
+    if mask != 0 {
+        let bits = [
+            (SPEAKER_FRONT_LEFT, SpeakerPosition::FrontLeft),
+            (SPEAKER_FRONT_RIGHT, SpeakerPosition::FrontRight),
+            (SPEAKER_FRONT_CENTER, SpeakerPosition::FrontCenter),
+            (SPEAKER_LOW_FREQUENCY, SpeakerPosition::LowFrequency),
+            (SPEAKER_BACK_LEFT, SpeakerPosition::BackLeft),
+            (SPEAKER_BACK_RIGHT, SpeakerPosition::BackRight),
+            (
+                SPEAKER_FRONT_LEFT_OF_CENTER,
+                SpeakerPosition::FrontLeftOfCenter,
+            ),
+            (
+                SPEAKER_FRONT_RIGHT_OF_CENTER,
+                SpeakerPosition::FrontRightOfCenter,
+            ),
+            (SPEAKER_BACK_CENTER, SpeakerPosition::BackCenter),
+            (SPEAKER_SIDE_LEFT, SpeakerPosition::SideLeft),
+            (SPEAKER_SIDE_RIGHT, SpeakerPosition::SideRight),
+        ];
+        let mut positions = Vec::with_capacity(channels);
+        for (bit, role) in bits {
+            if mask & bit != 0 {
+                positions.push(role);
+                if positions.len() == channels {
+                    return positions;
+                }
+            }
+        }
+        while positions.len() < channels {
+            positions.push(SpeakerPosition::Unknown);
+        }
+        return positions;
+    }
+
+    match channels {
+        1 => vec![SpeakerPosition::FrontCenter],
+        2 => vec![SpeakerPosition::FrontLeft, SpeakerPosition::FrontRight],
+        6 => vec![
+            SpeakerPosition::FrontLeft,
+            SpeakerPosition::FrontRight,
+            SpeakerPosition::FrontCenter,
+            SpeakerPosition::LowFrequency,
+            SpeakerPosition::BackLeft,
+            SpeakerPosition::BackRight,
+        ],
+        8 => vec![
+            SpeakerPosition::FrontLeft,
+            SpeakerPosition::FrontRight,
+            SpeakerPosition::FrontCenter,
+            SpeakerPosition::LowFrequency,
+            SpeakerPosition::BackLeft,
+            SpeakerPosition::BackRight,
+            SpeakerPosition::SideLeft,
+            SpeakerPosition::SideRight,
+        ],
+        _ => (0..channels)
+            .map(|idx| match idx {
+                0 => SpeakerPosition::FrontLeft,
+                1 => SpeakerPosition::FrontRight,
+                _ => SpeakerPosition::Unknown,
+            })
+            .collect(),
+    }
+}
+
+fn channel_by_role(frame: &[f32], positions: &[SpeakerPosition], role: SpeakerPosition) -> f32 {
+    positions
+        .iter()
+        .position(|candidate| *candidate == role)
+        .and_then(|idx| frame.get(idx).copied())
+        .unwrap_or(0.0)
+}
+
+fn push_stereo_downmix(output: &mut Vec<f32>, frame: &[f32], positions: &[SpeakerPosition]) {
+    let fl = channel_by_role(frame, positions, SpeakerPosition::FrontLeft);
+    let fr = channel_by_role(frame, positions, SpeakerPosition::FrontRight);
+    let fc = channel_by_role(frame, positions, SpeakerPosition::FrontCenter);
+    let bl = channel_by_role(frame, positions, SpeakerPosition::BackLeft);
+    let br = channel_by_role(frame, positions, SpeakerPosition::BackRight);
+    let sl = channel_by_role(frame, positions, SpeakerPosition::SideLeft);
+    let sr = channel_by_role(frame, positions, SpeakerPosition::SideRight);
+    let bc = channel_by_role(frame, positions, SpeakerPosition::BackCenter);
+    let flc = channel_by_role(frame, positions, SpeakerPosition::FrontLeftOfCenter);
+    let frc = channel_by_role(frame, positions, SpeakerPosition::FrontRightOfCenter);
+
+    let left = fl + 0.7071 * fc + 0.7071 * flc + 0.50 * sl + 0.354 * bl + 0.354 * bc;
+    let right = fr + 0.7071 * fc + 0.7071 * frc + 0.50 * sr + 0.354 * br + 0.354 * bc;
+    let peak = left.abs().max(right.abs());
+    if peak > 1.0 {
+        output.push(left / peak);
+        output.push(right / peak);
+    } else {
+        output.push(left);
+        output.push(right);
+    }
+}
+
+fn remix_channels(samples: &[f32], in_ch: u16, out_ch: u16, in_mask: u32, out_mask: u32) -> Vec<f32> {
+    if in_ch == 0 || out_ch == 0 {
+        return Vec::new();
+    }
+
+    if in_ch == out_ch && (in_mask == out_mask || out_mask == 0) {
+        return samples.to_vec();
+    }
+
+    let in_ch = in_ch as usize;
+    let out_ch = out_ch as usize;
+    let frame_count = samples.len() / in_ch;
+    let in_positions = speaker_positions(in_ch, in_mask);
+    let out_positions = speaker_positions(out_ch, out_mask);
+    let mut output = Vec::with_capacity(frame_count * out_ch);
+
+    for frame_idx in 0..frame_count {
+        let frame_start = frame_idx * in_ch;
+        let frame = &samples[frame_start..frame_start + in_ch];
+
+        if out_ch == 2 {
+            push_stereo_downmix(&mut output, frame, &in_positions);
+            continue;
+        }
+
+        for out_idx in 0..out_ch {
+            let role = out_positions
+                .get(out_idx)
+                .copied()
+                .unwrap_or(SpeakerPosition::Unknown);
+            let mapped = if role == SpeakerPosition::Unknown {
+                frame.get(out_idx).copied().unwrap_or(0.0)
+            } else {
+                channel_by_role(frame, &in_positions, role)
+            };
+            output.push(mapped);
+        }
+    }
+
+    output
 }

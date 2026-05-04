@@ -64,6 +64,14 @@ struct EngineParams {
     float boostReleaseMs = 0.5f;
     float limiterReleaseMs = 0.5f;
     float stereoWidth = 100.0f;
+    float weaponMuteAmount = 0.0f;
+    float weaponSilencerAmount = 0.0f;
+    float silencerBodyAmount = 0.0f;
+    float silencerCrackAmount = 0.0f;
+    float silencerAirAmount = 0.0f;
+    float silencerTailAmount = 0.0f;
+    float silencerSideAmount = 0.0f;
+    float silencerRestoreAmount = 100.0f;
     bool protectionExtreme = true;
     bool spectralMaskEnabled = true;
     bool debugLogging = false;

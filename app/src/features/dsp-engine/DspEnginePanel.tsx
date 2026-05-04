@@ -5,7 +5,7 @@
  * sections in the exact order shown in the reference screenshots.
  * Includes presets loaded from the spectrum config files.
  */
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X, Cpu, ChevronDown, Save, Trash2 } from 'lucide-react';
 import { vanySoundApi } from '../../lib/vanysound';
 import './dsp-engine-panel.css';
@@ -27,80 +27,89 @@ interface DspParam {
 
 const DSP_PARAMS: DspParam[] = [
   { key: 'weaponOnlyMode',      label: 'Solo arma / resto nativo', min: 0,    max: 1,     step: 1,    default: 0,    unit: '',   section: 'macro' },
-  { key: 'changeIntensity',     label: 'Nivel de cambio',        min: 0,    max: 200,   step: 1,    default: 100,  unit: '',   section: 'macro' },
+  { key: 'changeIntensity',     label: 'Nivel de cambio',        min: 0,    max: 400,   step: 1,    default: 100,  unit: '',   section: 'macro' },
   { key: 'subtletyAmount',      label: 'Sutileza',               min: 0,    max: 100,   step: 1,    default: 35,   unit: '',   section: 'macro' },
   { key: 'wetMix',              label: 'Mezcla procesada',       min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'macro' },
 
   // ── PASOS ──
-  { key: 'footstepEnhance',      label: 'Footstep Enhance',       min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'pasos' },
-  { key: 'stepLowBodyBoostDb',   label: 'Paso: cuerpo bajo',      min: 0,    max: 14,    step: 0.5,  default: 10,   unit: '',   section: 'pasos' },
-  { key: 'stepLowMidBoostDb',    label: 'Paso: cuerpo medio',     min: 0,    max: 14,    step: 0.5,  default: 9,    unit: '',   section: 'pasos' },
-  { key: 'stepBodyBoostDb',      label: 'Paso: presencia 1.55k',  min: 0,    max: 20,    step: 0.5,  default: 14,   unit: '',   section: 'pasos' },
-  { key: 'stepClarityBoostDb',   label: 'Paso: claridad 3.5k',    min: 0,    max: 24,    step: 0.5,  default: 20,   unit: '',   section: 'pasos' },
-  { key: 'detectionSensitivity', label: 'Sensibilidad detector',  min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'pasos' },
+  { key: 'footstepEnhance',      label: 'Footstep Enhance',       min: 0,    max: 400,   step: 1,    default: 100,  unit: '',   section: 'pasos' },
+  { key: 'stepLowBodyBoostDb',   label: 'Paso: cuerpo bajo',      min: 0,    max: 48,    step: 0.5,  default: 10,   unit: '',   section: 'pasos' },
+  { key: 'stepLowMidBoostDb',    label: 'Paso: cuerpo medio',     min: 0,    max: 48,    step: 0.5,  default: 9,    unit: '',   section: 'pasos' },
+  { key: 'stepBodyBoostDb',      label: 'Paso: presencia 1.55k',  min: 0,    max: 60,    step: 0.5,  default: 14,   unit: '',   section: 'pasos' },
+  { key: 'stepClarityBoostDb',   label: 'Paso: claridad 3.5k',    min: 0,    max: 72,    step: 0.5,  default: 20,   unit: '',   section: 'pasos' },
+  { key: 'detectionSensitivity', label: 'Sensibilidad detector',  min: 0,    max: 400,   step: 1,    default: 100,  unit: '',   section: 'pasos' },
 
-  { key: 'stepBodyFreqHz',       label: 'Paso cuerpo Hz',         min: 600,  max: 2600,  step: 10,   default: 1550, unit: '',   section: 'pasos_tuning' },
-  { key: 'stepBodyQ',            label: 'Paso cuerpo Q',          min: 0.25, max: 5,     step: 0.05, default: 1.35, unit: '',   section: 'pasos_tuning' },
-  { key: 'stepClarityFreqHz',    label: 'Paso claridad Hz',       min: 1800, max: 6200,  step: 25,   default: 3500, unit: '',   section: 'pasos_tuning' },
-  { key: 'stepClarityQ',         label: 'Paso claridad Q',        min: 0.25, max: 6,     step: 0.05, default: 1.85, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepBodyFreqHz',       label: 'Paso cuerpo Hz',         min: 80,   max: 8000,  step: 10,   default: 1550, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepBodyQ',            label: 'Paso cuerpo Q',          min: 0.05, max: 12,    step: 0.05, default: 1.35, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepClarityFreqHz',    label: 'Paso claridad Hz',       min: 300,  max: 16000, step: 25,   default: 3500, unit: '',   section: 'pasos_tuning' },
+  { key: 'stepClarityQ',         label: 'Paso claridad Q',        min: 0.05, max: 16,    step: 0.05, default: 1.85, unit: '',   section: 'pasos_tuning' },
 
   // ── DISPAROS / AIRSTRIKES ──
-  { key: 'gunshotReduction',     label: 'Reducción disparos',     min: 0,    max: 100,   step: 1,    default: 85,   unit: '',   section: 'disparos' },
-  { key: 'explosionReduction',   label: 'Reducción explosiones',  min: 0,    max: 100,   step: 1,    default: 90,   unit: '',   section: 'disparos' },
-  { key: 'weaponMidCutDb',       label: 'Corte arma 1.6k',        min: -48,  max: 0,     step: 1,    default: -22,  unit: '',   section: 'disparos' },
-  { key: 'weaponAirCutDb',       label: 'Corte agudos arma',      min: -48,  max: 0,     step: 1,    default: -20,  unit: '',   section: 'disparos' },
-  { key: 'sustainedHoldMs',      label: 'Hold ruido largo ms',    min: 0.5,  max: 1600,  step: 0.5,  default: 0.5,  unit: '',   section: 'disparos' },
-  { key: 'masterDuckDb',         label: 'Profundidad arma dB',    min: -30,  max: 0,     step: 0.5,  default: 0,    unit: '',   section: 'disparos' },
-  { key: 'impactDuckDb',         label: 'Profundidad impacto dB', min: -40,  max: 0,     step: 0.5,  default: -16,  unit: '',   section: 'disparos' },
+  { key: 'gunshotReduction',     label: 'Reducción disparos',     min: 0,    max: 400,   step: 1,    default: 85,   unit: '',   section: 'disparos' },
+  { key: 'explosionReduction',   label: 'Reducción explosiones',  min: 0,    max: 400,   step: 1,    default: 90,   unit: '',   section: 'disparos' },
+  { key: 'weaponMidCutDb',       label: 'Corte arma 1.6k',        min: -120, max: 0,     step: 1,    default: -22,  unit: '',   section: 'disparos' },
+  { key: 'weaponAirCutDb',       label: 'Corte agudos arma',      min: -120, max: 0,     step: 1,    default: -20,  unit: '',   section: 'disparos' },
+  { key: 'sustainedHoldMs',      label: 'Hold ruido largo ms',    min: 0.5,  max: 3000,  step: 0.5,  default: 0.5,  unit: '',   section: 'disparos' },
+  { key: 'masterDuckDb',         label: 'Profundidad arma dB',    min: -96,  max: 0,     step: 0.5,  default: 0,    unit: '',   section: 'disparos' },
+  { key: 'impactDuckDb',         label: 'Profundidad impacto dB', min: -96,  max: 0,     step: 0.5,  default: -16,  unit: '',   section: 'disparos' },
+  { key: 'weaponMuteAmount',     label: 'Mute extra arma',        min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'disparos' },
 
-  { key: 'lowShelfFreqHz',       label: 'Bajos shelf Hz',         min: 80,   max: 500,   step: 5,    default: 250,  unit: '',   section: 'band_target' },
-  { key: 'lowMidFreqHz',         label: 'Low-mid Hz',             min: 250,  max: 1200,  step: 10,   default: 650,  unit: '',   section: 'band_target' },
-  { key: 'lowMidQ',              label: 'Low-mid Q',              min: 0.25, max: 3,     step: 0.05, default: 0.9,  unit: '',   section: 'band_target' },
-  { key: 'weaponMidFreqHz',      label: 'Arma medios Hz',         min: 700,  max: 3600,  step: 25,   default: 1600, unit: '',   section: 'band_target' },
-  { key: 'weaponMidQ',           label: 'Arma medios Q',          min: 0.25, max: 4,     step: 0.05, default: 0.85, unit: '',   section: 'band_target' },
-  { key: 'weaponAirFreqHz',      label: 'Arma agudos Hz',         min: 3000, max: 12000, step: 50,   default: 6500, unit: '',   section: 'band_target' },
-  { key: 'weaponAirQ',           label: 'Arma agudos Q',          min: 0.25, max: 5,     step: 0.05, default: 1,    unit: '',   section: 'band_target' },
+  { key: 'weaponSilencerAmount',  label: 'Silenciador total',      min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'silencer' },
+  { key: 'silencerBodyAmount',    label: 'Silenciar cuerpo',       min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'silencer' },
+  { key: 'silencerCrackAmount',   label: 'Silenciar crack',        min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'silencer' },
+  { key: 'silencerAirAmount',     label: 'Silenciar aire',         min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'silencer' },
+  { key: 'silencerTailAmount',    label: 'Silenciar cola',         min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'silencer' },
+  { key: 'silencerSideAmount',    label: 'Silenciar lateral',      min: 0,    max: 400,   step: 1,    default: 0,    unit: '',   section: 'silencer' },
+  { key: 'silencerRestoreAmount', label: 'Restaurar resto',        min: 0,    max: 400,   step: 1,    default: 100,  unit: '',   section: 'silencer' },
+
+  { key: 'lowShelfFreqHz',       label: 'Bajos shelf Hz',         min: 20,   max: 1200,  step: 5,    default: 250,  unit: '',   section: 'band_target' },
+  { key: 'lowMidFreqHz',         label: 'Low-mid Hz',             min: 40,   max: 3000,  step: 10,   default: 650,  unit: '',   section: 'band_target' },
+  { key: 'lowMidQ',              label: 'Low-mid Q',              min: 0.05, max: 12,    step: 0.05, default: 0.9,  unit: '',   section: 'band_target' },
+  { key: 'weaponMidFreqHz',      label: 'Arma medios Hz',         min: 120,  max: 8000,  step: 25,   default: 1600, unit: '',   section: 'band_target' },
+  { key: 'weaponMidQ',           label: 'Arma medios Q',          min: 0.05, max: 16,    step: 0.05, default: 0.85, unit: '',   section: 'band_target' },
+  { key: 'weaponAirFreqHz',      label: 'Arma agudos Hz',         min: 1000, max: 20000, step: 50,   default: 6500, unit: '',   section: 'band_target' },
+  { key: 'weaponAirQ',           label: 'Arma agudos Q',          min: 0.05, max: 20,    step: 0.05, default: 1,    unit: '',   section: 'band_target' },
 
   // ── STFT GUNSHOT KILLER ──
-  { key: 'spectralFloorDb',      label: 'Mascara baja dB',        min: -48,  max: -18,   step: 1,    default: -36,  unit: '',   section: 'stft' },
-  { key: 'stftCutoffHz',         label: 'Corte mascara baja Hz',  min: 500,  max: 8000,  step: 100,  default: 2500, unit: '',   section: 'stft' },
-  { key: 'stftPreserveDb',       label: 'Preservar pasos dB',     min: -12,  max: 12,    step: 0.5,  default: 0,    unit: '',   section: 'stft' },
+  { key: 'spectralFloorDb',      label: 'Mascara baja dB',        min: -120, max: -6,    step: 1,    default: -36,  unit: '',   section: 'stft' },
+  { key: 'stftCutoffHz',         label: 'Corte mascara baja Hz',  min: 120,  max: 16000, step: 100,  default: 2500, unit: '',   section: 'stft' },
+  { key: 'stftPreserveDb',       label: 'Preservar pasos dB',     min: -48,  max: 48,    step: 0.5,  default: 0,    unit: '',   section: 'stft' },
 
   // ── TRANSIENT / LOOKAHEAD ──
-  { key: 'transientKill',        label: 'Transient kill',         min: 0,    max: 100,   step: 1,    default: 70,   unit: '',   section: 'transient' },
-  { key: 'lookaheadMs',          label: 'Lookahead ms',           min: 0,    max: 2,     step: 0.01, default: 0,    unit: '',   section: 'transient' },
+  { key: 'transientKill',        label: 'Transient kill',         min: 0,    max: 400,   step: 1,    default: 70,   unit: '',   section: 'transient' },
+  { key: 'lookaheadMs',          label: 'Lookahead ms',           min: 0,    max: 10,    step: 0.01, default: 0,    unit: '',   section: 'transient' },
 
-  { key: 'protectionAttackMs',   label: 'Corte attack ms',        min: 0.5,  max: 90,    step: 0.5,  default: 0.5,  unit: '',   section: 'timing' },
-  { key: 'protectionReleaseMs',  label: 'Corte release ms',       min: 0.5,  max: 900,   step: 0.5,  default: 0.5,  unit: '',   section: 'timing' },
-  { key: 'boostAttackMs',        label: 'Boost attack ms',        min: 0.5,  max: 90,    step: 0.5,  default: 0.5,  unit: '',   section: 'timing' },
-  { key: 'boostReleaseMs',       label: 'Boost release ms',       min: 0.5,  max: 900,   step: 0.5,  default: 0.5,  unit: '',   section: 'timing' },
-  { key: 'limiterReleaseMs',     label: 'Limiter release ms',     min: 0.5,  max: 250,   step: 0.5,  default: 0.5,  unit: '',   section: 'timing' },
-  { key: 'stereoWidth',          label: 'Stereo width',           min: 50,   max: 160,   step: 1,    default: 100,  unit: '',   section: 'timing' },
+  { key: 'protectionAttackMs',   label: 'Corte attack ms',        min: 0.01, max: 5000,  step: 0.01, default: 0.5,  unit: '',   section: 'timing' },
+  { key: 'protectionReleaseMs',  label: 'Corte release ms',       min: 0.01, max: 5000,  step: 0.01, default: 0.5,  unit: '',   section: 'timing' },
+  { key: 'boostAttackMs',        label: 'Boost attack ms',        min: 0.01, max: 5000,  step: 0.01, default: 0.5,  unit: '',   section: 'timing' },
+  { key: 'boostReleaseMs',       label: 'Boost release ms',       min: 0.01, max: 5000,  step: 0.01, default: 0.5,  unit: '',   section: 'timing' },
+  { key: 'limiterReleaseMs',     label: 'Limiter release ms',     min: 0.01, max: 1000,  step: 0.01, default: 0.5,  unit: '',   section: 'timing' },
+  { key: 'stereoWidth',          label: 'Stereo width',           min: 0,    max: 300,   step: 1,    default: 100,  unit: '',   section: 'timing' },
 
   // ── SALIDA ──
-  { key: 'actionDetail',         label: 'Action Detail',          min: 0,    max: 100,   step: 1,    default: 26,   unit: '',   section: 'salida' },
-  { key: 'outputCeilingDb',      label: 'Techo salida dB',        min: -12,  max: -0.5,  step: 0.1,  default: -0.5, unit: '',   section: 'salida' },
+  { key: 'actionDetail',         label: 'Action Detail',          min: 0,    max: 400,   step: 1,    default: 26,   unit: '',   section: 'salida' },
+  { key: 'outputCeilingDb',      label: 'Techo salida dB',        min: -60,  max: -0.1,  step: 0.1,  default: -0.5, unit: '',   section: 'salida' },
 
   // ── EQ / BALANCE FINAL ──
-  { key: 'outputTrimDb',         label: 'Output trim dB',         min: -20,  max: 6,     step: 0.5,  default: -7.5, unit: '',   section: 'eq_balance' },
-  { key: 'residualReductionDb',  label: 'Reduccion residual dB',  min: -24,  max: 0,     step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
+  { key: 'outputTrimDb',         label: 'Output trim dB',         min: -60,  max: 24,    step: 0.5,  default: -7.5, unit: '',   section: 'eq_balance' },
+  { key: 'residualReductionDb',  label: 'Reduccion residual dB',  min: -96,  max: 0,     step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
   { key: 'footstepGuardAmount',  label: 'Guard pasos residual',   min: 0,    max: 100,   step: 1,    default: 85,   unit: '',   section: 'eq_balance' },
-  { key: 'balanceLowDb',         label: 'Balance bajos dB',       min: -12,  max: 12,    step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
-  { key: 'balanceMidDb',         label: 'Balance medios dB',      min: -12,  max: 12,    step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
-  { key: 'balanceHighDb',        label: 'Balance agudos dB',      min: -12,  max: 12,    step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
+  { key: 'balanceLowDb',         label: 'Balance bajos dB',       min: -48,  max: 48,    step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
+  { key: 'balanceMidDb',         label: 'Balance medios dB',      min: -48,  max: 48,    step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
+  { key: 'balanceHighDb',        label: 'Balance agudos dB',      min: -48,  max: 48,    step: 0.5,  default: 0,    unit: '',   section: 'eq_balance' },
 
   // ── LEVELING ──
-  { key: 'footstepLevelerAmount',   label: 'Footstep Volume',     min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'leveling' },
-  { key: 'footstepTargetRmsDb',     label: 'Loudness objetivo',   min: -36,  max: -14,   step: 0.5,  default: -14,  unit: '',   section: 'leveling' },
-  { key: 'footstepMaxLiftDb',       label: 'Max Lift dB',         min: 0,    max: 18,    step: 0.5,  default: 12,   unit: '',   section: 'leveling' },
-  { key: 'footstepLevelerSpeedMs',  label: 'Velocidad ms',        min: 1,    max: 120,   step: 1,    default: 5,    unit: '',   section: 'leveling' },
+  { key: 'footstepLevelerAmount',   label: 'Footstep Volume',     min: 0,    max: 400,   step: 1,    default: 100,  unit: '',   section: 'leveling' },
+  { key: 'footstepTargetRmsDb',     label: 'Loudness objetivo',   min: -60,  max: 0,     step: 0.5,  default: -14,  unit: '',   section: 'leveling' },
+  { key: 'footstepMaxLiftDb',       label: 'Max Lift dB',         min: 0,    max: 60,    step: 0.5,  default: 12,   unit: '',   section: 'leveling' },
+  { key: 'footstepLevelerSpeedMs',  label: 'Velocidad ms',        min: 0.5,  max: 1000,  step: 0.5,  default: 5,    unit: '',   section: 'leveling' },
 
   // ── ESTABILIDAD ──
   { key: 'stabilityAmount',      label: 'Estabilidad general',    min: 0,    max: 100,   step: 1,    default: 100,  unit: '',   section: 'estabilidad' },
-  { key: 'spectralFloorStab',    label: 'Spectral floor dB',      min: -48,  max: -18,   step: 1,    default: -34,  unit: '',   section: 'estabilidad' },
-  { key: 'stableReleaseMs',      label: 'Release estable ms',     min: 0.5,  max: 500,   step: 0.5,  default: 0.5,  unit: '',   section: 'estabilidad' },
+  { key: 'spectralFloorStab',    label: 'Spectral floor dB',      min: -120, max: -6,    step: 1,    default: -34,  unit: '',   section: 'estabilidad' },
+  { key: 'stableReleaseMs',      label: 'Release estable ms',     min: 0.5,  max: 3000,  step: 0.5,  default: 0.5,  unit: '',   section: 'estabilidad' },
   { key: 'protectionPasos',      label: 'Proteccion pasos',       min: 0,    max: 100,   step: 1,    default: 85,   unit: '',   section: 'estabilidad' },
-  { key: 'maxCutStepDb',         label: 'Max cambio corte dB',    min: 3,    max: 24,    step: 0.5,  default: 8,    unit: '',   section: 'estabilidad' },
+  { key: 'maxCutStepDb',         label: 'Max cambio corte dB',    min: 3,    max: 96,    step: 0.5,  default: 8,    unit: '',   section: 'estabilidad' },
 ];
 
 const SECTION_META: { id: string; title: string; side: 'left' | 'right' }[] = [
@@ -108,6 +117,7 @@ const SECTION_META: { id: string; title: string; side: 'left' | 'right' }[] = [
   { id: 'pasos',        title: 'PASOS',                  side: 'left' },
   { id: 'pasos_tuning', title: 'PASOS: FRECUENCIA / Q',  side: 'left' },
   { id: 'disparos',     title: 'DISPAROS / AIRSTRIKES',  side: 'left' },
+  { id: 'silencer',      title: 'SILENCIADOR MODULAR',    side: 'left' },
   { id: 'band_target',  title: 'ARMAS / BANDA EXACTA',   side: 'left' },
   { id: 'stft',         title: 'STFT GUNSHOT KILLER',    side: 'right' },
   { id: 'transient',    title: 'TRANSIENT / LOOKAHEAD',  side: 'right' },
@@ -131,6 +141,7 @@ interface Preset {
 }
 
 const CUSTOM_PRESETS_STORAGE_KEY = 'vanysound.dsp.customPresets.v1';
+const ACTIVE_PRESET_STORAGE_KEY = 'vanysound.dsp.activePreset.v1';
 
 function loadCustomPresets(): Preset[] {
   if (typeof window === 'undefined') return [];
@@ -168,6 +179,20 @@ function persistCustomPresets(presets: Preset[]) {
   );
 }
 
+function loadActivePresetId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY);
+}
+
+function persistActivePresetId(presetId: string | null) {
+  if (typeof window === 'undefined') return;
+  if (presetId) {
+    window.localStorage.setItem(ACTIVE_PRESET_STORAGE_KEY, presetId);
+  } else {
+    window.localStorage.removeItem(ACTIVE_PRESET_STORAGE_KEY);
+  }
+}
+
 function makeCustomPresetId(name: string) {
   const slug = name
     .trim()
@@ -180,6 +205,35 @@ function makeCustomPresetId(name: string) {
 }
 
 const PRESETS: Preset[] = [
+  {
+    id: 'spectrum_71_self_weapon',
+    label: 'Spectrum 7.1 - Self Weapon',
+    values: {
+      weaponOnlyMode: 1, changeIntensity: 400, subtletyAmount: 0, wetMix: 100,
+      footstepEnhance: 0, actionDetail: 0, gunshotReduction: 400, explosionReduction: 0,
+      detectionSensitivity: 400, outputCeilingDb: -0.1, stepBodyBoostDb: 0, stepClarityBoostDb: 0,
+      stepLowBodyBoostDb: 0, stepLowMidBoostDb: 0, weaponMidCutDb: -120, weaponAirCutDb: -120,
+      sustainedHoldMs: 42, masterDuckDb: -96, impactDuckDb: -96, footstepLevelerAmount: 0,
+      footstepTargetRmsDb: -24, footstepMaxLiftDb: 0, footstepLevelerSpeedMs: 60,
+      stabilityAmount: 0, spectralFloorDb: -120, stftCutoffHz: 3000, stftPreserveDb: 0,
+      transientKill: 400, spectralFloorStab: -120, stableReleaseMs: 18, footstepGuardAmount: 100,
+      protectionPasos: 100, maxCutStepDb: 96, outputTrimDb: 0, residualReductionDb: -96,
+      balanceLowDb: 0, balanceMidDb: 0, balanceHighDb: 0,
+      lowShelfFreqHz: 240, lowMidFreqHz: 920, lowMidQ: 1.05,
+      weaponMidFreqHz: 2450, weaponMidQ: 1.20,
+      stepBodyFreqHz: 1550, stepBodyQ: 1.35,
+      stepClarityFreqHz: 3500, stepClarityQ: 1.85,
+      weaponAirFreqHz: 7600, weaponAirQ: 1.05,
+      protectionAttackMs: 0.01, protectionReleaseMs: 14,
+      boostAttackMs: 0.01, boostReleaseMs: 0.01,
+      limiterReleaseMs: 0.01, stereoWidth: 100,
+      weaponMuteAmount: 400, weaponSilencerAmount: 400,
+      silencerBodyAmount: 225, silencerCrackAmount: 400,
+      silencerAirAmount: 400, silencerTailAmount: 330,
+      silencerSideAmount: 45, silencerRestoreAmount: 185,
+    },
+    flags: { protectionExtreme: true, spectralMaskEnabled: true, debugLogging: true },
+  },
   {
     id: 'perfecta_solo_arma_05ms',
     label: 'DUAL MASK PRO - Solo Disparo',
@@ -357,6 +411,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
   const [presetName, setPresetName] = useState('');
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restoredActivePresetRef = useRef(false);
 
   const allPresets = useMemo(() => [...PRESETS, ...customPresets], [customPresets]);
 
@@ -375,6 +430,36 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       })
       .finally(() => setApplying(false));
   }, []);
+
+  useEffect(() => {
+    if (restoredActivePresetRef.current) return;
+    restoredActivePresetRef.current = true;
+
+    const storedPresetId = loadActivePresetId();
+    if (!storedPresetId) return;
+
+    const preset = [...PRESETS, ...customPresets].find((item) => item.id === storedPresetId);
+    if (!preset) {
+      persistActivePresetId(null);
+      return;
+    }
+
+    const next: Record<string, number> = {};
+    DSP_PARAMS.forEach((p) => {
+      next[p.key] = preset.values[p.key] ?? p.default;
+    });
+    const nextProtectionExtreme = preset.flags?.protectionExtreme ?? true;
+    const nextSpectralMask = preset.flags?.spectralMaskEnabled ?? true;
+    setParams(next);
+    setProtectionExtreme(nextProtectionExtreme);
+    setSpectralMask(nextSpectralMask);
+    setActivePreset(preset.id);
+    setDspEnabled(true);
+    const restoreTimer = window.setTimeout(() => {
+      flushToBackend(next, nextProtectionExtreme, nextSpectralMask);
+    }, 800);
+    return () => window.clearTimeout(restoreTimer);
+  }, [customPresets, flushToBackend]);
 
   // Bypass: write empty config to disable all processing
   const flushBypass = useCallback(() => {
@@ -414,6 +499,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       return next;
     });
     setActivePreset(preset.id);
+    persistActivePresetId(preset.id);
     setPresetName('');
     setSaveStatus('Preset guardado');
   }, [params, presetName, protectionExtreme, spectralMask]);
@@ -424,7 +510,11 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       persistCustomPresets(next);
       return next;
     });
-    setActivePreset((current) => (current === presetId ? null : current));
+    setActivePreset((current) => {
+      if (current !== presetId) return current;
+      persistActivePresetId(null);
+      return null;
+    });
     setSaveStatus('Preset eliminado');
   }, []);
 
@@ -436,6 +526,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       flushToBackend(params, protectionExtreme, spectralMask);
     } else {
       // Turning OFF: bypass all processing
+      persistActivePresetId(null);
       flushBypass();
     }
   }, [dspEnabled, params, protectionExtreme, spectralMask, flushToBackend, flushBypass]);
@@ -452,6 +543,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       return next;
     });
     setActivePreset(null);
+    persistActivePresetId(null);
     setSaveStatus(null);
   }, [flushToBackend, protectionExtreme, spectralMask, dspEnabled]);
 
@@ -461,6 +553,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
     setParams(defaults);
     setProtectionExtreme(true);
     setActivePreset(null);
+    persistActivePresetId(null);
     setSaveStatus(null);
     flushToBackend(defaults, true, true);
   }, [flushToBackend]);
@@ -478,6 +571,7 @@ export const DspEnginePanel: React.FC<DspEnginePanelProps> = ({
       setSpectralMask(preset.flags.spectralMaskEnabled);
     }
     setActivePreset(preset.id);
+    persistActivePresetId(preset.id);
     setSaveStatus(null);
     setPresetOpen(false);
     if (!dspEnabled) setDspEnabled(true);

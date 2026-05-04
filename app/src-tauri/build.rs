@@ -20,6 +20,8 @@ fn build_warzone_audio_core() {
         .file(format!("{root}/src/Processor.cpp"))
         .file(format!("{root}/src/RealtimeEngine.cpp"))
         .file(format!("{root}/src/RealtimeCApi.cpp"))
+        .file(format!("{root}/src/SelfWeaponSuppressor.cpp"))
+        .file(format!("{root}/src/SpatialDspEngine.cpp"))
         .file(format!("{root}/src/TransientDetector.cpp"));
 
     if build.get_compiler().is_like_msvc() {

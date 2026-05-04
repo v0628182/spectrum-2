@@ -7,6 +7,15 @@
 
 namespace warzone_audio {
 
+namespace {
+
+float lerp(float a, float b, float t)
+{
+    return a + (b - a) * t;
+}
+
+} // namespace
+
 void TransientDetector::reset()
 {
     footstepState_ = 0.0f;
@@ -16,78 +25,68 @@ void TransientDetector::reset()
 
 DetectorScores TransientDetector::update(const FeatureFrame& f, const EngineParams& params)
 {
-    const float sensitivity = clamp(params.detectionSensitivity / 100.0f, 0.0f, 1.0f);
-    const float thresholdScale = 1.20f + (0.75f - 1.20f) * sensitivity;
+    const float sensitivity = clamp(params.detectionSensitivity / 100.0f, 0.0f, 4.0f);
+    const float easy = lerp(1.20f, 0.42f, saturate(sensitivity));
+    const float extreme = clamp((sensitivity - 1.0f) / 3.0f, 0.0f, 1.0f);
+    const float threshold = lerp(easy, 0.18f, extreme);
 
-    const float sFlux = ramp(f.superFluxStepExcess, constants::kSuperFluxStepMin * thresholdScale,
-                             constants::kSuperFluxStepStrong * thresholdScale);
-    const float sSnr = ramp(f.snrDb.step, 6.0f * thresholdScale, 18.0f * thresholdScale);
-    const float sAttack = ramp(f.attackStepDb, constants::kStepAttackMinDb * thresholdScale,
-                               constants::kStepAttackStrongDb * thresholdScale);
-    const float sCentroid = ramp(f.centroidHz, constants::kCentroidStepMinHz,
-                                 constants::kCentroidStepIdealHz);
-    const float sFlatness = saturate(1.0f - std::abs(f.flatnessStep - constants::kFlatnessStepTarget) /
-                                              constants::kFlatnessStepTarget);
-    const float sDuration =
-        (f.durationMs >= constants::kStepMinDurationMs && f.durationMs <= constants::kStepMaxDurationMs) ? 1.0f : 0.0f;
-    const float sStepDominance = ramp(f.energyDb.step - f.energyDb.lowMid, -3.0f, 6.0f);
-    const float broadbandPenalty = 1.0f - 0.75f * ramp(static_cast<float>(f.activeBands), 4.0f, 5.0f);
-    const float sQuietEvent = 1.0f - ramp(f.inputPeak, 0.075f, 0.220f);
+    const float broadbandFlux = ramp(f.superFluxBroadbandExcess, 0.045f * threshold, 0.180f * threshold);
+    const float presenceFlux = ramp(f.superFluxPresenceExcess, 0.035f * threshold, 0.150f * threshold);
+    const float stepFlux = ramp(f.superFluxStepExcess, 0.030f * threshold, 0.130f * threshold);
 
-    const float sBass = ramp(f.snrDb.bass, 12.0f, 30.0f);
-    const float sLowMid = ramp(f.snrDb.lowMid, 10.0f, 28.0f);
-    const float sTotal = ramp(f.snrDb.total, 14.0f, 32.0f);
-    const float sBroadband = ramp(static_cast<float>(f.activeBands), 3.0f, 5.0f);
-    const float sCrest = ramp(f.crestDb, constants::kCrestProtectionMinDb, 18.0f);
-    const float sPeak = ramp(f.inputPeak, 0.16f, 0.42f);
-    const float sImpactBody = ramp(std::max(f.energyDb.lowMid, f.energyDb.bass), 10.0f, 24.0f);
+    const float bassSnr = ramp(f.snrDb.bass, 8.0f * threshold, 26.0f * threshold);
+    const float lowMidSnr = ramp(f.snrDb.lowMid, 7.0f * threshold, 24.0f * threshold);
+    const float midSnr = ramp(f.snrDb.mid, 7.0f * threshold, 24.0f * threshold);
+    const float stepSnr = ramp(f.snrDb.step, 6.0f * threshold, 20.0f * threshold);
+    const float airSnr = ramp(f.snrDb.air, 7.0f * threshold, 22.0f * threshold);
+    const float totalSnr = ramp(f.snrDb.total, 10.0f * threshold, 30.0f * threshold);
 
-    float protection = saturate(0.22f * sBass + 0.18f * sLowMid + 0.22f * sTotal +
-                                0.16f * sBroadband + 0.08f * sCrest +
-                                0.08f * sPeak + 0.06f * sImpactBody);
+    const float activeBands = ramp(static_cast<float>(f.activeBands), 3.0f, 5.0f);
+    const float crest = ramp(f.crestDb, 8.0f, 17.5f);
+    const float peak = ramp(f.inputPeak, 0.055f, 0.34f);
+    const float shortImpact = ramp(std::max(f.attackStepDb, f.attackLowMidDb), 4.0f * threshold, 17.0f * threshold);
+    const float centroidGun = ramp(f.centroidHz, 1500.0f, 6200.0f);
+    const float noisyFlatness = ramp(f.flatnessStep, 0.38f, 0.92f);
 
-    const float footstepEvidence = saturate(0.25f * sFlux + 0.22f * sSnr + 0.20f * sAttack +
-                                            0.10f * sCentroid + 0.08f * sFlatness +
-                                            0.10f * sStepDominance + 0.05f * sDuration);
-    const float sActionSnrForStep = ramp(std::max(f.snrDb.mid, f.snrDb.step), 5.0f * thresholdScale,
-                                         16.0f * thresholdScale);
-    const float sSoftCrest = ramp(f.crestDb, 5.5f, 9.5f);
-    const float sSoftFlatness = ramp(f.flatnessStep, 0.18f, 0.48f) * (1.0f - 0.45f * ramp(f.flatnessStep, 0.78f, 1.0f));
-    const float softFootstepEvidence =
-        saturate(0.34f * sSnr + 0.24f * sActionSnrForStep + 0.16f * sSoftCrest +
-                 0.14f * sSoftFlatness + 0.08f * sDuration + 0.04f * sStepDominance) *
-        sQuietEvent * (1.0f - 0.55f * sBroadband);
-    const float notBroadband = 1.0f - sBroadband;
-    const float combinedFootstepEvidence = std::max(footstepEvidence, softFootstepEvidence);
-    protection *= 1.0f - 0.65f * combinedFootstepEvidence * notBroadband;
-    protection = std::max(protection, 0.75f * sPeak * sImpactBody);
+    const float footstepTone = ramp(f.snrDb.step - std::max(f.snrDb.bass, f.snrDb.lowMid), -2.0f, 10.0f);
+    const float footstepDuration =
+        (f.durationMs >= 8.0f && f.durationMs <= 180.0f) ? 1.0f : (1.0f - ramp(f.durationMs, 180.0f, 340.0f));
+    const float footstepCentroid = ramp(f.centroidHz, 1200.0f, 3600.0f) * (1.0f - ramp(f.centroidHz, 5600.0f, 9000.0f));
+    const float notHugePeak = 1.0f - ramp(f.inputPeak, 0.10f, 0.30f);
+    const float footstepEvidence =
+        saturate(0.24f * stepFlux + 0.23f * stepSnr + 0.18f * footstepTone +
+                 0.14f * footstepDuration + 0.11f * footstepCentroid +
+                 0.10f * notHugePeak) *
+        (1.0f - 0.72f * activeBands);
 
-    const float sProtectionPenalty = 1.0f - std::max(protection, protectionState_);
-    float footstep = sProtectionPenalty *
-                     broadbandPenalty *
-                     combinedFootstepEvidence;
+    const float weaponBody = std::sqrt(std::max(0.0f, bassSnr * lowMidSnr));
+    const float weaponCrackAir = std::sqrt(std::max(0.0f, std::max(midSnr, stepSnr) * airSnr));
+    const float weaponBroadband = std::min(std::max(weaponBody, midSnr), std::max(weaponCrackAir, totalSnr));
+    const float impact =
+        saturate(0.26f * peak + 0.22f * crest + 0.20f * shortImpact +
+                 0.18f * broadbandFlux + 0.14f * activeBands);
+    float gunshot =
+        saturate(0.25f * impact + 0.22f * weaponBroadband + 0.20f * weaponCrackAir +
+                 0.14f * presenceFlux + 0.10f * centroidGun + 0.09f * noisyFlatness);
 
-    if (sFlux < 0.15f || sAttack < 0.12f || sSnr < 0.10f) {
-        footstep *= 0.35f + 0.65f * softFootstepEvidence;
-    }
+    const float guard = std::max(saturate(params.footstepGuardAmount / 100.0f), saturate(params.protectionPasos / 100.0f));
+    gunshot *= 1.0f - 0.22f * guard * footstepEvidence;
 
-    const float sActionFlux = ramp(f.superFluxPresenceExcess + f.superFluxStepExcess, 0.05f, 0.18f);
-    const float sActionSnr = ramp(std::max(f.snrDb.mid, f.snrDb.step), 5.0f, 16.0f);
-    const float sActionDuration = ramp(f.durationMs, 10.0f, 160.0f) * (1.0f - ramp(f.durationMs, 160.0f, 300.0f));
-    float action = (1.0f - protection) *
-                   (0.45f * sActionFlux + 0.35f * sActionSnr + 0.20f * sActionDuration);
+    const float tail =
+        saturate(0.38f * weaponBroadband + 0.26f * totalSnr + 0.20f * airSnr + 0.16f * lowMidSnr) *
+        (1.0f - 0.18f * guard * footstepEvidence);
 
-    footstepState_ = approachDb(footstepState_, footstep, 3.0f, 90.0f);
-    actionState_ = approachDb(actionState_, action, 5.0f, 100.0f);
-    protectionState_ = approachDb(protectionState_, protection, 1.0f, 140.0f);
+    footstepState_ = approachDb(footstepState_, footstepEvidence, 1.5f, 95.0f);
+    protectionState_ = approachDb(protectionState_, gunshot, 0.08f, clamp(params.protectionReleaseMs, 4.0f, 220.0f));
+    actionState_ = approachDb(actionState_, tail, 0.35f, clamp(params.sustainedHoldMs, 20.0f, 3000.0f));
 
     DetectorScores scores;
     scores.footstep = saturate(footstepState_);
     scores.action = saturate(actionState_);
     scores.protection = saturate(protectionState_);
     scores.lateral = f.lateral;
-    scores.confidence = std::max({scores.footstep, scores.action, scores.protection});
-    scores.impact = saturate(sPeak * sImpactBody);
+    scores.impact = saturate(impact * (1.0f - 0.70f * guard * scores.footstep));
+    scores.confidence = std::max({scores.footstep, scores.action, scores.protection, scores.impact});
     return scores;
 }
 

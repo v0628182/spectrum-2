@@ -71,6 +71,14 @@ typedef struct WzaEngineParams {
     float boostReleaseMs;
     float limiterReleaseMs;
     float stereoWidth;
+    float weaponMuteAmount;
+    float weaponSilencerAmount;
+    float silencerBodyAmount;
+    float silencerCrackAmount;
+    float silencerAirAmount;
+    float silencerTailAmount;
+    float silencerSideAmount;
+    float silencerRestoreAmount;
     int protectionExtreme;
     int spectralMaskEnabled;
     int debugLogging;

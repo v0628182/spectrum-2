@@ -78,6 +78,14 @@ RealtimeEngine::AtomicParams::AtomicParams() noexcept
       boostReleaseMs(EngineParams{}.boostReleaseMs),
       limiterReleaseMs(EngineParams{}.limiterReleaseMs),
       stereoWidth(EngineParams{}.stereoWidth),
+      weaponMuteAmount(EngineParams{}.weaponMuteAmount),
+      weaponSilencerAmount(EngineParams{}.weaponSilencerAmount),
+      silencerBodyAmount(EngineParams{}.silencerBodyAmount),
+      silencerCrackAmount(EngineParams{}.silencerCrackAmount),
+      silencerAirAmount(EngineParams{}.silencerAirAmount),
+      silencerTailAmount(EngineParams{}.silencerTailAmount),
+      silencerSideAmount(EngineParams{}.silencerSideAmount),
+      silencerRestoreAmount(EngineParams{}.silencerRestoreAmount),
       protectionExtreme(EngineParams{}.protectionExtreme ? 1 : 0),
       spectralMaskEnabled(EngineParams{}.spectralMaskEnabled ? 1 : 0),
       debugLogging(EngineParams{}.debugLogging ? 1 : 0)
@@ -142,6 +150,14 @@ void RealtimeEngine::AtomicParams::store(const EngineParams& params) noexcept
     boostReleaseMs.store(sanitize(params.boostReleaseMs, EngineParams{}.boostReleaseMs), std::memory_order_relaxed);
     limiterReleaseMs.store(sanitize(params.limiterReleaseMs, EngineParams{}.limiterReleaseMs), std::memory_order_relaxed);
     stereoWidth.store(sanitize(params.stereoWidth, EngineParams{}.stereoWidth), std::memory_order_relaxed);
+    weaponMuteAmount.store(sanitize(params.weaponMuteAmount, EngineParams{}.weaponMuteAmount), std::memory_order_relaxed);
+    weaponSilencerAmount.store(sanitize(params.weaponSilencerAmount, EngineParams{}.weaponSilencerAmount), std::memory_order_relaxed);
+    silencerBodyAmount.store(sanitize(params.silencerBodyAmount, EngineParams{}.silencerBodyAmount), std::memory_order_relaxed);
+    silencerCrackAmount.store(sanitize(params.silencerCrackAmount, EngineParams{}.silencerCrackAmount), std::memory_order_relaxed);
+    silencerAirAmount.store(sanitize(params.silencerAirAmount, EngineParams{}.silencerAirAmount), std::memory_order_relaxed);
+    silencerTailAmount.store(sanitize(params.silencerTailAmount, EngineParams{}.silencerTailAmount), std::memory_order_relaxed);
+    silencerSideAmount.store(sanitize(params.silencerSideAmount, EngineParams{}.silencerSideAmount), std::memory_order_relaxed);
+    silencerRestoreAmount.store(sanitize(params.silencerRestoreAmount, EngineParams{}.silencerRestoreAmount), std::memory_order_relaxed);
     protectionExtreme.store(params.protectionExtreme ? 1 : 0, std::memory_order_relaxed);
     spectralMaskEnabled.store(params.spectralMaskEnabled ? 1 : 0, std::memory_order_relaxed);
     debugLogging.store(params.debugLogging ? 1 : 0, std::memory_order_relaxed);
@@ -206,6 +222,14 @@ EngineParams RealtimeEngine::AtomicParams::load() const noexcept
     params.boostReleaseMs = boostReleaseMs.load(std::memory_order_relaxed);
     params.limiterReleaseMs = limiterReleaseMs.load(std::memory_order_relaxed);
     params.stereoWidth = stereoWidth.load(std::memory_order_relaxed);
+    params.weaponMuteAmount = weaponMuteAmount.load(std::memory_order_relaxed);
+    params.weaponSilencerAmount = weaponSilencerAmount.load(std::memory_order_relaxed);
+    params.silencerBodyAmount = silencerBodyAmount.load(std::memory_order_relaxed);
+    params.silencerCrackAmount = silencerCrackAmount.load(std::memory_order_relaxed);
+    params.silencerAirAmount = silencerAirAmount.load(std::memory_order_relaxed);
+    params.silencerTailAmount = silencerTailAmount.load(std::memory_order_relaxed);
+    params.silencerSideAmount = silencerSideAmount.load(std::memory_order_relaxed);
+    params.silencerRestoreAmount = silencerRestoreAmount.load(std::memory_order_relaxed);
     params.protectionExtreme = protectionExtreme.load(std::memory_order_relaxed) != 0;
     params.spectralMaskEnabled = spectralMaskEnabled.load(std::memory_order_relaxed) != 0;
     params.debugLogging = debugLogging.load(std::memory_order_relaxed) != 0;
@@ -224,23 +248,9 @@ bool RealtimeEngine::prepare(std::size_t maxFrames, std::size_t maxChannels)
         return false;
     }
 
-    try {
-        left_.assign(maxFrames, 0.0f);
-        right_.assign(maxFrames, 0.0f);
-        outLeft_.assign(maxFrames, 0.0f);
-        outRight_.assign(maxFrames, 0.0f);
-        maxFramesPrepared_ = maxFrames;
-        maxChannelsPrepared_ = maxChannels;
-        return true;
-    } catch (...) {
-        left_.clear();
-        right_.clear();
-        outLeft_.clear();
-        outRight_.clear();
-        maxFramesPrepared_ = 0;
-        maxChannelsPrepared_ = 0;
-        return false;
-    }
+    maxFramesPrepared_ = maxFrames;
+    maxChannelsPrepared_ = maxChannels;
+    return true;
 }
 
 void RealtimeEngine::reset()
@@ -295,7 +305,8 @@ void RealtimeEngine::passthrough(const float* input, float* output, std::size_t 
 void RealtimeEngine::processInterleaved(const float* input,
                                         float* output,
                                         std::size_t frames,
-                                        std::size_t channels) noexcept
+                                        std::size_t channels,
+                                        std::uint32_t channelMask) noexcept
 {
     if (!input || !output || frames == 0 || channels == 0) {
         return;
@@ -304,55 +315,15 @@ void RealtimeEngine::processInterleaved(const float* input,
     lastFrames_.store(frames, std::memory_order_relaxed);
     lastChannels_.store(channels, std::memory_order_relaxed);
 
-    if (maxFramesPrepared_ == 0 || frames > maxFramesPrepared_) {
+    if (maxFramesPrepared_ == 0 || frames > maxFramesPrepared_ ||
+        maxChannelsPrepared_ == 0 || channels > maxChannelsPrepared_) {
         oversizedBlocks_.fetch_add(1, std::memory_order_relaxed);
         passthrough(input, output, frames, channels);
         return;
     }
 
     applyPendingParamsIfNeeded();
-
-    for (std::size_t i = 0; i < frames; ++i) {
-        const float* frame = input + i * channels;
-        if (channels == 1) {
-            left_[i] = frame[0];
-            right_[i] = frame[0];
-        } else if (channels == 2) {
-            left_[i] = frame[0];
-            right_[i] = frame[1];
-        } else {
-            const float fl = frame[0];
-            const float fr = frame[1];
-            const float fc = channels > 2 ? frame[2] : 0.0f;
-            const float lfe = channels > 3 ? frame[3] : 0.0f;
-            const float bl = channels > 4 ? frame[4] : 0.0f;
-            const float br = channels > 5 ? frame[5] : 0.0f;
-            const float sl = channels > 6 ? frame[6] : 0.0f;
-            const float sr = channels > 7 ? frame[7] : 0.0f;
-            left_[i] = fl + 0.7071f * fc + 0.25f * lfe + 0.7071f * bl + 0.7071f * sl;
-            right_[i] = fr + 0.7071f * fc + 0.25f * lfe + 0.7071f * br + 0.7071f * sr;
-            const float peak = std::max(std::abs(left_[i]), std::abs(right_[i]));
-            if (peak > 1.0f) {
-                left_[i] /= peak;
-                right_[i] /= peak;
-            }
-        }
-    }
-
-    engine_.processBlock(left_.data(), right_.data(), outLeft_.data(), outRight_.data(), frames);
-
-    for (std::size_t i = 0; i < frames; ++i) {
-        float* frame = output + i * channels;
-        if (channels == 1) {
-            frame[0] = 0.5f * (outLeft_[i] + outRight_[i]);
-        } else {
-            frame[0] = outLeft_[i];
-            frame[1] = outRight_[i];
-            for (std::size_t ch = 2; ch < channels; ++ch) {
-                frame[ch] = 0.0f;
-            }
-        }
-    }
+    engine_.processInterleaved(input, output, frames, channels, channelMask);
 
     blocksProcessed_.fetch_add(1, std::memory_order_relaxed);
     publishSnapshot();
